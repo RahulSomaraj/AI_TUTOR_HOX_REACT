@@ -1,7 +1,7 @@
 import axios from "axios";
 import api from "./axiosInstance";
 
-const BASE_URL = "https://uatai.hoxinfotech.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function isEmail(value) {
   return typeof value === "string" && value.includes("@");

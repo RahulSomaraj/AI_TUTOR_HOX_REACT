@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BASE_URL = "https://uatai.hoxinfotech.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS);
 
 // Tracks whether a refresh call is already in flight
 let isRefreshing = false;
@@ -28,7 +29,7 @@ function clearSessionAndRedirect() {
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: API_TIMEOUT_MS,
   headers: { "Content-Type": "application/json" },
 });
 
