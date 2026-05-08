@@ -7,7 +7,7 @@ const AdminLayout = () => {
     <div className="flex h-screen">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-[#EEF5F9]">
         <Navbar />
 
         <div className="p-4 overflow-y-auto">

@@ -49,12 +49,12 @@ export default function Sidebar() {
     <aside className="w-[230px] h-screen bg-white flex flex-col pt-5 pb-6 overflow-y-auto select-none">
       {/* Logo */}
       <div className="text-center mb-5 px-4">
-        <span
-          className="text-[#235A6E] text-2xl tracking-[0.3px] underline underline-offset-2 decoration-[#235A6E] decoration-1"
-          style={{ fontFamily: "'Harabara Mais Demo', sans-serif" }}
-        >
-          AiTutor
-        </span>
+      <span
+        className="text-[#235A6E] text-4xl tracking-[0.3px] underline underline-offset-2 decoration-[#235A6E] decoration-1"
+        style={{ fontFamily: "'Harabara Mais Demo', sans-serif" }}
+      >
+        AiTutor
+      </span>
       </div>
 
       {/* Navigation */}
