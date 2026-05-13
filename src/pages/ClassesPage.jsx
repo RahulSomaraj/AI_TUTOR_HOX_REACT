@@ -1,11 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, MoreHorizontal, ChevronDown, ChevronLeft, ChevronRight,Pencil, Trash2, Plus, PlusCircle, MinusCircle, X, Loader2,} from "lucide-react";
+import { Search, MoreHorizontal, ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import {
   fetchClasses, createClass, deleteClass, updateClass,
   fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards, fetchStudentsByGrade,
 } from "../api/authService";
-
-
 
 function useOutsideClick(ref, cb) {
   useEffect(() => {
@@ -26,7 +24,22 @@ function useDebounce(value, delay = 400) {
   return debounced;
 }
 
-//  Tooltip Button
+const DROPDOWN_LIMIT = 10;
+
+// Auto-fetch all pages helper
+async function fetchAllPages(fetcher, query = "") {
+  let page = 1;
+  let all = [];
+  while (true) {
+    const list = await fetcher(query, page);
+    all = [...all, ...list];
+    if (list.length < DROPDOWN_LIMIT) break;
+    page++;
+  }
+  return all;
+}
+
+// Tooltip Button
 function TooltipButton({ onClick, tooltip, children, className = "" }) {
   const [show, setShow] = useState(false);
   return (
@@ -50,7 +63,7 @@ function TooltipButton({ onClick, tooltip, children, className = "" }) {
   );
 }
 
-// Searchable Select Dropdown
+// Searchable Select Dropdown 
 function SearchableSelect({
   value,
   onChange,
@@ -126,7 +139,6 @@ function SearchableSelect({
               </button>
             )}
           </div>
-
           <div className="max-h-44 overflow-y-auto py-1">
             {loading ? (
               <div className="flex items-center justify-center py-4">
@@ -154,17 +166,22 @@ function SearchableSelect({
   );
 }
 
-// School Search Hook
+// School Search Hook 
 function useSchoolSearch() {
   const [schools, setSchools] = useState([]);
   const [loadingSchools, setLoadingSchools] = useState(false);
 
   const searchSchools = useCallback((query = "") => {
     setLoadingSchools(true);
-    fetchSchools({ page: 1, limit: 10, schoolName: query })
-      .then((res) => {
-        const raw = res?.data?.schools || res?.data?.data || res?.data || res || [];
-        const list = Array.isArray(raw) ? raw : [];
+    fetchAllPages(
+      (q, page) =>
+        fetchSchools({ page, limit: DROPDOWN_LIMIT, schoolName: q }).then((res) => {
+          const raw = res?.data?.schools || res?.data?.data || res?.data || res || [];
+          return Array.isArray(raw) ? raw : [];
+        }),
+      query
+    )
+      .then((list) => {
         setSchools(list.map((s) => ({
           value: s.id,
           label: s.schoolName || s.name,
@@ -179,7 +196,7 @@ function useSchoolSearch() {
   return { schools, loadingSchools, searchSchools };
 }
 
-// Board Grade Search Hook
+// Board Grade Search Hook 
 function useBoardGradeSearch(boardId) {
   const [boardGrades, setBoardGrades] = useState([]);
   const [loadingGrades, setLoadingGrades] = useState(false);
@@ -187,9 +204,15 @@ function useBoardGradeSearch(boardId) {
   const searchGrades = useCallback((query = "") => {
     if (!boardId) { setBoardGrades([]); return; }
     setLoadingGrades(true);
-    fetchBoardGrades({ page: 1, limit: 10, boardId, name: query })
-      .then((res) => {
-        const list = res?.data?.boardGrades || res?.data?.data || res?.data || [];
+    fetchAllPages(
+      (q, page) =>
+        fetchBoardGrades({ page, limit: DROPDOWN_LIMIT, boardId, name: q }).then((res) => {
+          const list = res?.data?.boardGrades || res?.data?.data || res?.data || [];
+          return Array.isArray(list) ? list : [];
+        }),
+      query
+    )
+      .then((list) => {
         setBoardGrades(list.map((g) => ({ value: g.id, label: g.name || g.grade || String(g.id) })));
       })
       .catch(() => setBoardGrades([]))
@@ -199,7 +222,7 @@ function useBoardGradeSearch(boardId) {
   return { boardGrades, loadingGrades, searchGrades };
 }
 
-// Teacher Search Hook
+// Teacher Search Hook 
 function useTeacherSearch(schoolId) {
   const [teachers, setTeachers] = useState([]);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
@@ -207,9 +230,15 @@ function useTeacherSearch(schoolId) {
   const searchTeachers = useCallback((query = "") => {
     if (!schoolId) { setTeachers([]); return; }
     setLoadingTeachers(true);
-    fetchTeachers({ page: 1, limit: 10, schoolId, name: query })
-      .then((res) => {
-        const list = res?.data?.users || res?.data?.data || res?.data || [];
+    fetchAllPages(
+      (q, page) =>
+        fetchTeachers({ page, limit: DROPDOWN_LIMIT, schoolId, name: q }).then((res) => {
+          const list = res?.data?.users || res?.data?.data || res?.data || [];
+          return Array.isArray(list) ? list : [];
+        }),
+      query
+    )
+      .then((list) => {
         setTeachers(list.map((t) => ({
           value: t.id,
           label: t.name || `${t.firstName || ""} ${t.lastName || ""}`.trim(),
@@ -222,7 +251,32 @@ function useTeacherSearch(schoolId) {
   return { teachers, loadingTeachers, searchTeachers };
 }
 
-// Add Class Modal 
+// School Filter Hook 
+function useFilterSchoolSearch() {
+  const [schools, setSchools] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback((query = "") => {
+    setLoading(true);
+    fetchAllPages(
+      (q, page) =>
+        fetchSchools({ page, limit: DROPDOWN_LIMIT, schoolName: q }).then((res) => {
+          const raw = res?.data?.schools || res?.data?.data || res?.data || [];
+          return Array.isArray(raw) ? raw : [];
+        }),
+      query
+    )
+      .then((list) => {
+        setSchools(list.map((s) => ({ value: s.id, label: s.schoolName || s.name })));
+      })
+      .catch(() => setSchools([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { schools, loading, search };
+}
+
+// Add Class Modal
 function AddClassModal({ onClose, onSuccess }) {
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [selectedGrade, setSelectedGrade] = useState(null);
@@ -351,7 +405,7 @@ function AddClassModal({ onClose, onSuccess }) {
   );
 }
 
-// Edit Class Modal 
+// Edit Class Modal
 function EditClassModal({ classData, boardsMap = {}, onClose, onSuccess }) {
   const [className, setClassName] = useState(classData?.aliasName || classData?.name || "");
   const [division, setDivision] = useState(
@@ -528,39 +582,82 @@ function ActionMenu({ onEdit, onDelete }) {
   );
 }
 
-// School Filter Dropdown
-function SchoolFilter({ value, onChange, schools = [], loading = false }) {
+// School Filter Dropdown 
+function SchoolFilter({ value, onChange }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
+  const inputRef = useRef(null);
+  const { schools, loading, search } = useFilterSchoolSearch();
+  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    if (open) search(debouncedQuery);
+  }, [debouncedQuery, open]);
 
   const allOption = { value: "", label: "All Schools" };
   const options = [allOption, ...schools];
-  const selectedLabel = options.find((o) => o.value === value)?.label || "All Schools";
+  const selectedLabel = value
+    ? (schools.find((s) => s.value === value)?.label || "School selected")
+    : "All Schools";
+
+  const handleOpen = () => {
+    setOpen((v) => !v);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
 
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpen}
         className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 bg-white hover:border-gray-400 transition-colors min-w-[140px] justify-between"
       >
-        <span>{loading ? "Loading..." : selectedLabel}</span>
-        {loading
+        <span>{loading && schools.length === 0 ? "Loading..." : selectedLabel}</span>
+        {loading && schools.length === 0
           ? <Loader2 size={13} className="animate-spin text-gray-400" />
           : <ChevronDown size={14} className="text-gray-500" />
         }
       </button>
       {open && (
-        <div className="absolute right-0 top-10 z-40 bg-white border border-gray-200 rounded-lg shadow-lg w-56 py-1 text-sm max-h-60 overflow-y-auto">
-          {options.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => { onChange(s.value); setOpen(false); }}
-              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${value === s.value ? "text-[#23616E] font-medium" : "text-gray-700"}`}
-            >
-              {s.label}
-            </button>
-          ))}
+        <div className="absolute right-0 top-10 z-40 bg-white border border-gray-200 rounded-lg shadow-lg w-64 text-sm">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
+            <Search size={13} className="text-gray-400 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search school..."
+              className="flex-1 text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <div className="max-h-52 overflow-y-auto py-1">
+            {loading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#23616E]" />
+              </div>
+            ) : options.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No schools found</p>
+            ) : (
+              options.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => { onChange(s.value); setOpen(false); setQuery(""); }}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${value === s.value ? "text-[#23616E] font-medium" : "text-gray-700"}`}
+                >
+                  {s.label}
+                </button>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -600,8 +697,7 @@ function RowsPerPageSelect({ value, onChange }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
+// Main Page
 export default function ClassesPage() {
   const [classes, setClasses] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -609,12 +705,10 @@ export default function ClassesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [filterSchoolId, setFilterSchoolId] = useState("");
-  const [filterSchools, setFilterSchools] = useState([]);
   const [boardsMap, setBoardsMap] = useState({});
   const [studentCounts, setStudentCounts] = useState({});
 
   const [loading, setLoading] = useState(false);
-  const [loadingSchools, setLoadingSchools] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editClass, setEditClass] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -622,26 +716,16 @@ export default function ClassesPage() {
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
-  // Fetch filter schools + boards map
   useEffect(() => {
-    setLoadingSchools(true);
-    Promise.all([
-      fetchSchools({ page: 1, limit: 50 }),
-      fetchBoards({ page: 1, limit: 50 }),
-    ])
-      .then(([schoolRes, boardRes]) => {
-        const schools = schoolRes?.data?.schools || schoolRes?.data?.data || schoolRes?.data || schoolRes || [];
-        const schoolList = Array.isArray(schools) ? schools : [];
-        setFilterSchools(schoolList.map((s) => ({ value: s.id, label: s.schoolName || s.name })));
-
+    fetchBoards({ page: 1, limit: 50 })
+      .then((boardRes) => {
         const boards = boardRes?.data?.educationBoards || boardRes?.data?.data || boardRes?.data || boardRes || [];
         const boardList = Array.isArray(boards) ? boards : [];
         const map = {};
         boardList.forEach((b) => { map[b.id] = b.name; });
         setBoardsMap(map);
       })
-      .catch(() => {})
-      .finally(() => setLoadingSchools(false));
+      .catch(() => {});
   }, []);
 
   const loadClasses = useCallback(() => {
@@ -658,20 +742,25 @@ export default function ClassesPage() {
         setClasses(list);
         setTotalCount(count);
 
-        Promise.all(
-          list.map((g) =>
-            fetchStudentsByGrade(g.id, { page: 1, limit: 1 })
-              .then((r) => {
-                const total = r?.pagination?.totalCount ?? r?.data?.pagination?.totalCount ?? 0;
-                return { id: g.id, count: total };
-              })
-              .catch(() => ({ id: g.id, count: 0 }))
-          )
-        ).then((results) => {
-          const counts = {};
-          results.forEach(({ id, count }) => { counts[id] = count; });
-          setStudentCounts(counts);
-        });
+        const needsCounts = list.some(
+          (g) => g._count?.students === undefined && g.studentCount === undefined
+        );
+        if (needsCounts) {
+          Promise.all(
+            list.map((g) =>
+              fetchStudentsByGrade(g.id, { page: 1, limit: 1 })
+                .then((r) => {
+                  const total = r?.pagination?.totalCount ?? r?.data?.pagination?.totalCount ?? 0;
+                  return { id: g.id, count: total };
+                })
+                .catch(() => ({ id: g.id, count: 0 }))
+            )
+          ).then((results) => {
+            const counts = {};
+            results.forEach(({ id, count }) => { counts[id] = count; });
+            setStudentCounts(counts);
+          });
+        }
       })
       .catch(() => { setClasses([]); setTotalCount(0); })
       .finally(() => setLoading(false));
@@ -696,14 +785,12 @@ export default function ClassesPage() {
   const handleSchoolFilter = (id) => { setFilterSchoolId(id); setPage(1); };
   const handleItemsPerPageChange = (val) => { setItemsPerPage(val); setPage(1); };
 
-  // Range display
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * itemsPerPage + 1;
   const rangeEnd = Math.min(page * itemsPerPage, totalCount);
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
 
-      {/* Add Class Modal */}
       {showAddModal && (
         <AddClassModal
           onClose={() => setShowAddModal(false)}
@@ -711,7 +798,6 @@ export default function ClassesPage() {
         />
       )}
 
-      {/* Edit Class Modal */}
       {editClass && (
         <EditClassModal
           classData={editClass}
@@ -721,7 +807,6 @@ export default function ClassesPage() {
         />
       )}
 
-      {/* Delete Confirm Dialog */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
@@ -749,7 +834,6 @@ export default function ClassesPage() {
         </div>
       )}
 
-      {/* ── Page Header: Title + Add Class button — outside cards ── */}
       <div className="flex items-center justify-between px-6 pt-3 pb-5">
         <h1 className="text-4xl font-bold text-gray-900">Classes</h1>
         <button
@@ -761,9 +845,7 @@ export default function ClassesPage() {
         </button>
       </div>
 
-      {/* ── Card 1: Search + filter ── */}
       <div className="mx-6 mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4 flex items-center justify-between">
-        {/* Pill search bar matching actual website */}
         <div className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-2 w-96 bg-[#F5F6FA]">
           <Search size={15} className="text-gray-900 shrink-0" />
           <input
@@ -774,36 +856,27 @@ export default function ClassesPage() {
             className="bg-transparent text-sm text-gray-600 placeholder-gray-800 outline-none w-full"
           />
         </div>
-        <SchoolFilter
-          value={filterSchoolId}
-          onChange={handleSchoolFilter}
-          schools={filterSchools}
-          loading={loadingSchools}
-        />
+        <SchoolFilter value={filterSchoolId} onChange={handleSchoolFilter} />
       </div>
 
-      {/* ── Card 2: Classes subheading + table + pagination ── */}
       <div className="mx-6 mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
-
-        {/* Subheading inside table card */}
         <div className="px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-800">Classes</h2>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto px-5">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#EEF5F7]">
-                 <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 rounded-l-2xl"> Class</th>
-                 <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Division</th>
-                 <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">School</th>
-                 <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Board</th>
-                 <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Students</th>
-                 <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Teacher</th>
-                 <th className="px-6 py-4 rounded-r-2xl" />
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 rounded-l-2xl">Class</th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Division</th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">School</th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Board</th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Students</th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Teacher</th>
+                <th className="px-6 py-4 rounded-r-2xl" />
               </tr>
-           </thead>
+            </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
@@ -828,7 +901,7 @@ export default function ClassesPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-600">{c.school?.schoolName || c.school?.name || c.schoolName || "-"}</td>
                     <td className="px-6 py-4 text-gray-600">{boardsMap[c.boardId] || c.board?.name || c.boardName || "-"}</td>
-                    <td className="px-6 py-4 text-gray-600">{studentCounts[c.id] ?? c._count?.students ?? c.studentCount ?? 0}</td>
+                    <td className="px-6 py-4 text-gray-600">{c._count?.students ?? c.studentCount ?? studentCounts[c.id] ?? 0}</td>
                     <td className="px-6 py-4 text-gray-600">
                       {c.teacher
                         ? (c.teacher.name || `${c.teacher.firstName || ""} ${c.teacher.lastName || ""}`.trim() || "-")
@@ -847,10 +920,8 @@ export default function ClassesPage() {
           </table>
         </div>
 
-        {/* ── Pagination bar matching screenshot ── */}
         {!loading && totalCount > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            {/* Left: Rows per page */}
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span>Rows per page</span>
               <RowsPerPageSelect value={itemsPerPage} onChange={handleItemsPerPageChange} />
@@ -858,8 +929,6 @@ export default function ClassesPage() {
                 {rangeStart}-{rangeEnd} of {totalCount}
               </span>
             </div>
-
-            {/* Right: Prev / Next + page info */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
