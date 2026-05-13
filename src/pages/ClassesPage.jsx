@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, MoreHorizontal, ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import {
   fetchClasses, createClass, deleteClass, updateClass,
-  fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards, fetchStudentsByGrade,
+  fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards, 
 } from "../api/authService";
 
 function useOutsideClick(ref, cb) {
@@ -741,26 +741,6 @@ export default function ClassesPage() {
         const count = res?.pagination?.totalCount || data?.total || data?.count || list.length;
         setClasses(list);
         setTotalCount(count);
-
-        const needsCounts = list.some(
-          (g) => g._count?.students === undefined && g.studentCount === undefined
-        );
-        if (needsCounts) {
-          Promise.all(
-            list.map((g) =>
-              fetchStudentsByGrade(g.id, { page: 1, limit: 1 })
-                .then((r) => {
-                  const total = r?.pagination?.totalCount ?? r?.data?.pagination?.totalCount ?? 0;
-                  return { id: g.id, count: total };
-                })
-                .catch(() => ({ id: g.id, count: 0 }))
-            )
-          ).then((results) => {
-            const counts = {};
-            results.forEach(({ id, count }) => { counts[id] = count; });
-            setStudentCounts(counts);
-          });
-        }
       })
       .catch(() => { setClasses([]); setTotalCount(0); })
       .finally(() => setLoading(false));
@@ -896,13 +876,19 @@ export default function ClassesPage() {
                     <td className="px-6 py-4 text-gray-800 font-medium">
                       {c.aliasName || c.name || c.className || "-"}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-gray-800">
                       {c.division || (c.aliasName?.includes("-") ? c.aliasName.split("-").pop() : "-")}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{c.school?.schoolName || c.school?.name || c.schoolName || "-"}</td>
-                    <td className="px-6 py-4 text-gray-600">{boardsMap[c.boardId] || c.board?.name || c.boardName || "-"}</td>
-                    <td className="px-6 py-4 text-gray-600">{c._count?.students ?? c.studentCount ?? studentCounts[c.id] ?? 0}</td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-gray-800">{c.school?.schoolName || c.school?.name || c.schoolName || "-"}</td>
+                    <td className="px-6 py-4 text-gray-800">{boardsMap[c.boardId] || c.board?.name || c.boardName || "-"}</td>
+                    <td className="px-6 py-4 text-gray-800">
+                      {c.noOfStudents ??
+                         c._count?.students ??
+                         c.studentCount ??
+                         studentCounts[c.id] ??
+                      0}
+                   </td>
+                    <td className="px-6 py-4 text-gray-800">
                       {c.teacher
                         ? (c.teacher.name || `${c.teacher.firstName || ""} ${c.teacher.lastName || ""}`.trim() || "-")
                         : (c.teacherName || "-")}

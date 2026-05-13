@@ -72,16 +72,6 @@ function ImageUploadField({ value, onChange }) {
         className="hidden"
         onChange={handleFileChange}
       />
-
-      {/* Live preview */}
-      {value && (
-        <img
-          src={value}
-          alt="Banner preview"
-          className="mt-2 h-20 rounded-lg object-cover border border-gray-200"
-          onError={(e) => { e.target.style.display = "none"; }}
-        />
-      )}
     </div>
   );
 }
@@ -407,18 +397,10 @@ export default function BannerPage() {
                       <td className="px-6 py-4 text-gray-800 font-medium">{b.title || "-"}</td>
                       <td className="px-6 py-4 text-gray-600">{truncate(b.description || "", 60) || "-"}</td>
                       <td className="px-6 py-4 text-gray-500">
-                        <div className="flex items-center gap-3">
-                          {b.image && (
-                            <img src={b.image} alt={b.title}
-                              className="w-10 h-10 rounded-lg object-cover border border-gray-200 shrink-0"
-                              onError={(e) => { e.target.style.display = "none"; }}
-                            />
-                          )}
-                          <span className="text-xs font-mono text-gray-400">
-                            {truncate(b.image || "-", 45)}
-                          </span>
-                        </div>
-                      </td>
+                        <span className="text-xs font-mono text-gray-800">
+                           {truncate(b.image || "-", 45)}
+                        </span>
+                     </td>
                       <td className="px-6 py-4 text-right">
                         <ActionMenu onEdit={() => setEditBanner(b)} onDelete={() => setDeleteId(b.id)} />
                       </td>
