@@ -369,16 +369,16 @@ export default function BannerPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
           <div className="px-6 pt-5 pb-3">
-            <h2 className="text-lg font-semibold text-gray-800">Banner List</h2>
+            <h2 className="ty-section-heading">Banner List</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-y border-gray-100">
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600 w-1/4">Title</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600 w-1/3">Description</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Image</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header w-1/4">Title</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header w-1/3">Description</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Image</th>
                   <th className="px-6 py-3.5 w-12" />
                 </tr>
               </thead>
@@ -394,8 +394,8 @@ export default function BannerPage() {
                 ) : (
                   banners.map((b) => (
                     <tr key={b.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-6 py-4 text-gray-800 font-medium">{b.title || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">{truncate(b.description || "", 60) || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell-primary">{b.title || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">{truncate(b.description || "", 60) || "-"}</td>
                       <td className="px-6 py-4 text-gray-500">
                         <span className="text-xs font-mono text-gray-800">
                            {truncate(b.image || "-", 45)}
@@ -413,7 +413,7 @@ export default function BannerPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400">Page {page} of {totalPages || 1}</p>
+            <p className="ty-caption">Page {page} of {totalPages || 1}</p>
             <div className="flex items-center gap-2">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1 || loading}

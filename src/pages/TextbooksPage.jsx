@@ -601,15 +601,18 @@ export default function TextbooksPage() {
     <div className="min-h-screen bg-[#edf6f8] px-4 py-7 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight text-[#20242a]">
+          <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
             Syllabus
           </h1>
+          <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
+            {totalTextbooks} Syllabus
+          </p>
         </div>
 
         <button
           type="button"
           onClick={openAddModal}
-          className="flex h-[50px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold text-white transition hover:bg-[#104a55] sm:w-auto"
+          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
         >
           <Plus size={22} strokeWidth={2.2} />
           Add Syllabus
@@ -661,7 +664,7 @@ export default function TextbooksPage() {
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
-        <h2 className="mb-6 text-[24px] font-semibold leading-none text-[#20242a]">
+        <h2 className="mb-6 text-[24px] font-semibold leading-none tracking-[0] text-[#20242a]">
           Syllabus List
         </h2>
 

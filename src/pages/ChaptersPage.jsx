@@ -900,7 +900,7 @@ export default function ChaptersPage() {
             >
               <ArrowLeft size={22} />
             </button>
-            <h1 className="text-[32px] font-bold leading-tight text-[#20242a]">
+            <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
               Chapters
             </h1>
           </div>
@@ -913,7 +913,7 @@ export default function ChaptersPage() {
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="flex h-[50px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[15px] font-semibold text-white transition hover:bg-[#104a55] sm:w-auto"
+          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
         >
           <Plus size={20} strokeWidth={2.2} />
           Add Chapter
@@ -938,7 +938,7 @@ export default function ChaptersPage() {
       </div>
 
       <section className="rounded-[14px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
-        <h2 className="mb-6 text-[24px] font-semibold leading-none text-[#20242a]">
+        <h2 className="mb-6 text-[24px] font-semibold leading-none tracking-[0] text-[#20242a]">
           Chapters List
         </h2>
 
@@ -967,25 +967,25 @@ export default function ChaptersPage() {
               <table className="w-full min-w-[1080px] border-collapse">
                 <thead>
                   <tr className="border-b border-[#edf0f2]">
-                    <th className="px-3 py-4 text-left text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-left ty-table-header">
                       Title
                     </th>
-                    <th className="px-3 py-4 text-left text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-left ty-table-header">
                       Sub Title
                     </th>
-                    <th className="px-3 py-4 text-left text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-left ty-table-header">
                       Code
                     </th>
-                    <th className="px-3 py-4 text-left text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-left ty-table-header">
                       Description
                     </th>
-                    <th className="px-3 py-4 text-left text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-left ty-table-header">
                       Textbook
                     </th>
-                    <th className="px-3 py-4 text-left text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-left ty-table-header">
                       Status
                     </th>
-                    <th className="px-3 py-4 text-right text-[15px] font-medium text-[#16191d]">
+                    <th className="px-3 py-4 text-right ty-table-header">
                       Action
                     </th>
                   </tr>

@@ -628,7 +628,7 @@ export default function TeachersPage() {
         <button
           type="button"
           onClick={openAddModal}
-          className="flex h-[50px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
+          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
         >
           <Plus size={22} strokeWidth={2.2} />
           Add Teacher

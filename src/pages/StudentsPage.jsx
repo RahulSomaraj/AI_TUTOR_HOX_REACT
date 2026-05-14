@@ -815,15 +815,15 @@ export default function StudentsPage() {
                 ) : (
                   filteredStudents.map((s) => (
                     <tr key={s.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-6 py-4 text-gray-800 font-medium">{s.name || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">{s.contactEmail || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="px-6 py-4 ty-table-cell-primary">{s.name || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">{s.contactEmail || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">
                         {s.contactNumber
                           ? `${s.countryCode || "+91"}-${s.contactNumber}`
                           : "-"}
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{s.school?.schoolName || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">{s.grade?.aliasName || s.grade?.name || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">{s.school?.schoolName || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">{s.grade?.aliasName || s.grade?.name || "-"}</td>
                       <td className="px-6 py-4 text-right">
                         <ActionMenu
                           onEdit={() =>
@@ -849,7 +849,7 @@ export default function StudentsPage() {
 
           {!loading && totalPages > 1 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-              <p className="text-xs text-gray-400">
+              <p className="ty-caption">
                 Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, totalCount)} of {totalCount} students
               </p>
 

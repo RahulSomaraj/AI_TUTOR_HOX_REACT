@@ -785,9 +785,9 @@ export default function ParentsPage() {
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-5 py-2.5 rounded-xl transition-colors"
         >
-          <Plus size={16} />
+          <Plus size={18} />
           Add Parent
         </button>
       </div>
@@ -808,18 +808,18 @@ export default function ParentsPage() {
       <div className="flex-1 px-8 py-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 pt-5 pb-3">
-            <h2 className="text-lg font-semibold text-gray-800">Parents</h2>
+            <h2 className="ty-section-heading">Parents</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-y border-gray-100">
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Name</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Email</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Contact</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">School</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Students</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Name</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Email</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Contact</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">School</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Students</th>
                   <th className="px-6 py-3.5" />
                 </tr>
               </thead>
@@ -840,19 +840,19 @@ export default function ParentsPage() {
                 ) : (
                   displayParents.map((p) => (
                     <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-6 py-4 text-gray-800 font-medium">{p.name || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">{p.contactEmail || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="px-6 py-4 ty-table-cell-primary">{p.name || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">{p.contactEmail || "-"}</td>
+                      <td className="px-6 py-4 ty-table-cell">
                         {p.contactNumber
                           ? p.contactNumber.startsWith("+")
                             ? p.contactNumber
                             : `${p.countryCode || "+91"}-${p.contactNumber}`
                           : "-"}
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="px-6 py-4 ty-table-cell">
                         {p.school?.schoolName || p.school?.name || "-"}
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="px-6 py-4 ty-table-cell">
                         {Array.isArray(p.students) && p.students.length > 0
                           ? p.students.map((s) => s.name).filter(Boolean).join(", ")
                           : "-"}
@@ -886,7 +886,7 @@ export default function ParentsPage() {
 
           {!loading && totalPages > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-              <p className="text-xs text-gray-400">
+              <p className="ty-caption">
                 Showing {(page - 1) * ITEMS_PER_PAGE + 1}–
                 {Math.min(page * ITEMS_PER_PAGE, totalCount)} of {totalCount} parents
               </p>
