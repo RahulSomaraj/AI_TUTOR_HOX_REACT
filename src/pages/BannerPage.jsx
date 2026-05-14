@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import PaginationControls from "../components/PaginationControls";
 import {
   Search, MoreHorizontal, Plus, X, Loader2,
-  Pencil, Trash2, Upload,
+  ChevronLeft, ChevronRight, Pencil, Trash2, Upload,
 } from "lucide-react";
-import PaginationControls from "../components/PaginationControls";
 import {
   fetchBanners, createBanner, updateBanner, deleteBanner, uploadFile,
 } from "../api/authService";
@@ -19,7 +19,7 @@ function useOutsideClick(ref, cb) {
   }, [cb, ref]);
 }
 
-//  Image Upload Field 
+// ─── Image Upload Field ────────────────────────────────────────────────────────
 function ImageUploadField({ value, onChange }) {
   const fileRef = useRef(null);
   const [uploading, setUploading]     = useState(false);
@@ -79,7 +79,7 @@ function ImageUploadField({ value, onChange }) {
   );
 }
 
-//  Add Banner Modal 
+// ─── Add Banner Modal ──────────────────────────────────────────────────────────
 function AddBannerModal({ onClose, onSuccess }) {
   const [title, setTitle]             = useState("");
   const [description, setDescription] = useState("");
@@ -161,7 +161,7 @@ function AddBannerModal({ onClose, onSuccess }) {
   );
 }
 
-//  Edit Banner Modal 
+// ─── Edit Banner Modal ─────────────────────────────────────────────────────────
 function EditBannerModal({ banner, onClose, onSuccess }) {
   const [title, setTitle]             = useState(banner.title || "");
   const [description, setDescription] = useState(banner.description || "");
@@ -242,7 +242,7 @@ function EditBannerModal({ banner, onClose, onSuccess }) {
   );
 }
 
-//  Action Menu
+// ─── Action Menu ───────────────────────────────────────────────────────────────
 function ActionMenu({ onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -276,22 +276,20 @@ function ActionMenu({ onEdit, onDelete }) {
   );
 }
 
-// Main Page 
-const ITEMS_PER_PAGE = 10;
-
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function BannerPage() {
   const [banners, setBanners]       = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage]             = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [search, setSearch]         = useState("");
   const [loading, setLoading]       = useState(false);
   const [showAdd, setShowAdd]       = useState(false);
   const [editBanner, setEditBanner] = useState(null);
   const [deleteId, setDeleteId]     = useState(null);
   const [deleting, setDeleting]     = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const totalPages = Math.ceil(totalCount /itemsPerPage);
 
   const loadBanners = useCallback(() => {
     setLoading(true);
@@ -311,7 +309,7 @@ export default function BannerPage() {
       })
       .catch(() => { setBanners([]); setTotalCount(0); })
       .finally(() => setLoading(false));
-  }, [page, itemsPerPage, search]);
+  }, [page, search, itemsPerPage]);
 
   useEffect(() => { loadBanners(); }, [loadBanners]);
 
@@ -376,12 +374,15 @@ export default function BannerPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Banner</h1>
-        <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
-          <Plus size={16} /> Add Banner
+      {/* ── Page Header  ── */}
+      <div className="flex items-center justify-between px-6 pt-3 pb-5">
+        <h1 className="text-4xl font-bold text-gray-900">Banner</h1>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
+        >
+          <Plus size={18} />
+          Add Banner
         </button>
       </div>
 
@@ -394,7 +395,7 @@ export default function BannerPage() {
             placeholder="Search banner by title..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="bg-transparent text-sm text-gray-600 placeholder-gray-800 outline-none w-full"
+            className="bg-transparent text-sm text-gray-600 placeholder-gray-500 outline-none w-full"
           />
         </div>
       </div>
@@ -402,23 +403,30 @@ export default function BannerPage() {
       {/* ── Banner List Card ── */}
       <div className="mx-6 mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
 
-          <div className="px-6 pt-5 pb-3">
-            <h2 className="text-lg font-semibold text-gray-800">Banner List</h2>
-          </div>
+        <div className="px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-800">Banner List</h2>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-gray-100">
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600 w-1/4">Title</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600 w-1/3">Description</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Image</th>
-                  <th className="px-6 py-3.5 w-12" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {loading ? (
-                  <tr><td colSpan={4} className="text-center py-16">
+        <div className="overflow-x-auto px-5">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-[#EEF5F7]">
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 rounded-l-2xl w-1/4">
+                  Title
+                </th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 w-1/3">
+                  Description
+                </th>
+                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">
+                  Image
+                </th>
+                <th className="px-6 py-4 rounded-r-2xl w-12" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-14">
                     <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
                   </td>
                 </tr>
@@ -426,47 +434,48 @@ export default function BannerPage() {
                 <tr>
                   <td colSpan={4} className="text-center py-14 text-gray-400 text-sm">
                     No banners found.
-                  </td></tr>
-                ) : (
-                  banners.map((b) => (
-                    <tr key={b.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-6 py-4 text-gray-800 font-medium">{b.title || "-"}</td>
-                      <td className="px-6 py-4 text-gray-600">{truncate(b.description || "", 60) || "-"}</td>
-                      <td className="px-6 py-4 text-gray-500">
-                        <span className="text-xs font-mono text-gray-800">
-                           {truncate(b.image || "-", 45)}
-                        </span>
-                     </td>
-                      <td className="px-6 py-4 text-right">
-                        <ActionMenu onEdit={() => setEditBanner(b)} onDelete={() => setDeleteId(b.id)} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </td>
+                </tr>
+              ) : (
+                banners.map((b) => (
+                  <tr key={b.id} className="hover:bg-gray-50/70 transition-colors">
+                    <td className="px-6 py-4 text-gray-800 font-medium">{b.title || "-"}</td>
+                    <td className="px-6 py-4 text-gray-600">{truncate(b.description || "", 60) || "-"}</td>
+                    <td className="px-6 py-4 text-gray-500">
+                      <span className="text-xs font-mono text-gray-800">
+                        {truncate(b.image || "-", 45)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <ActionMenu
+                        onEdit={() => setEditBanner(b)}
+                        onDelete={() => setDeleteId(b.id)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          <PaginationControls
-            className="border-t border-gray-100 px-6 py-4"
-            rowsPerPage={itemsPerPage}
-            rowsPerPageOptions={[10, 20, 50]}
-            onRowsPerPageChange={(nextItemsPerPage) => {
-              setItemsPerPage(nextItemsPerPage);
-              setPage(1);
-            }}
-            rangeLabel={`${totalCount === 0 ? 0 : (page - 1) * itemsPerPage + 1}-${Math.min(
-              page * itemsPerPage,
-              totalCount
-            )} of ${totalCount}`}
-            currentPage={page}
-            totalPages={totalPages || 1}
-            hasPrev={page > 1}
-            hasNext={page < (totalPages || 1)}
-            disabled={loading}
-            onPrev={() => setPage((p) => Math.max(1, p - 1))}
-            onNext={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
-          />
+        {/* ── Pagination ── */}
+<div className="px-6 py-4 border-t border-gray-100">
+  <PaginationControls
+    currentPage={page}
+    totalPages={totalPages || 1}
+    onPrev={() => setPage((p) => Math.max(1, p - 1))}
+    onNext={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
+    rowsPerPage={itemsPerPage}
+    rowsPerPageOptions={[10, 20, 50]}
+    onRowsPerPageChange={(val) => {
+      setItemsPerPage(val);
+      setPage(1);
+    }}
+    rangeLabel={`${(page - 1) * itemsPerPage+ 1}–${Math.min(page * itemsPerPage, totalCount)} of ${totalCount}`}
+    disabled={loading}
+  />
+</div>
 
       </div>
     </div>
