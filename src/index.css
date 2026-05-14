@@ -10,7 +10,7 @@
 
   /* Subtitle / count line directly below the page title */
   .ty-subtitle {
-    @apply text-[18px] leading-none tracking-[0] text-[#20242a];
+    @apply text-[14px] leading-none text-[#5b626a];
   }
 
   /* Section heading — <h2> inside the white content card, above the table */

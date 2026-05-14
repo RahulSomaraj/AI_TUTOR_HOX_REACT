@@ -149,7 +149,7 @@ function AddGradeModal({ boardId, onClose, onSuccess }) {
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-2xl bg-white px-8 py-7 shadow-[0_24px_60px_rgba(16,38,48,0.18)]"
       >
-        <h2 className="mb-6 text-center text-[22px] font-bold text-[#20242a]">
+        <h2 className="mb-6 text-center text-[24px] font-bold text-[#20242a]">
           Add Grade
         </h2>
 
@@ -160,7 +160,7 @@ function AddGradeModal({ boardId, onClose, onSuccess }) {
         )}
 
         <div className="space-y-3">
-          <span className="block text-[14px] font-medium text-[#334155]">
+          <span className="block text-sm font-medium text-[#20242a]">
             Name
           </span>
 
@@ -276,12 +276,12 @@ function EditGradeModal({ grade, existingGrades, onClose, onSuccess }) {
       }}
     >
       <div className="w-full max-w-md rounded-2xl bg-white px-8 py-7 shadow-[0_24px_60px_rgba(16,38,48,0.18)]">
-        <h2 className="mb-6 text-center text-[22px] font-bold text-[#20242a]">
+        <h2 className="mb-6 text-center text-[24px] font-bold text-[#20242a]">
           Edit Grade
         </h2>
 
         <div className="space-y-2">
-          <span className="block text-[14px] font-medium text-[#334155]">
+          <span className="block text-sm font-medium text-[#20242a]">
             Name
           </span>
           <input
@@ -588,10 +588,10 @@ export default function BoardGradesPage() {
             <ArrowLeft size={17} />
           </button>
           <div>
-            <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+            <h1 className="ty-page-title">
               Board Grades
             </h1>
-            <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
+            <p className="mt-2 ty-subtitle">
               {totalGrades} Board Grades
             </p>
           </div>
@@ -628,93 +628,95 @@ export default function BoardGradesPage() {
         </label>
       </div>
 
-      {/* Content */}
-      {loading && (
-        <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#5b626a]">
-          <Loader2 size={18} className="animate-spin" />
-          Loading grades...
-        </div>
-      )}
+      <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
+        <h2 className="mb-6 ty-section-heading">Board Grades</h2>
 
-      {!loading && error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && grades.length === 0 && (
-        <div className="py-20 text-center text-sm text-[#5b626a]">
-          No grades found
-        </div>
-      )}
-
-      {!loading && !error && grades.length > 0 && (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {grades.map((grade) => (
-              <GradeCard
-                key={grade.id}
-                grade={grade}
-                onDelete={() => setDeleteTarget(grade)}
-                onEdit={() => setEditTarget(grade)}
-              />
-            ))}
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#5b626a]">
+            <Loader2 size={18} className="animate-spin" />
+            Loading grades...
           </div>
+        )}
 
-          {/* Pagination */}
-          <div className="mt-8 flex flex-col gap-4 text-sm text-[#3a3c42] xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex items-center gap-3">
-              <span>Rows per page</span>
-              <label className="relative inline-flex items-center">
-                <select
-                  value={limit}
-                  onChange={(event) => {
-                    setLimit(Number(event.target.value));
-                    setPage(1);
-                  }}
-                  className="h-10 appearance-none rounded-[10px] border border-[#c7cbd1] bg-[#f7f9fb] px-4 pr-10 text-[15px] text-[#3a3c42] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-                >
-                  {[12, 24, 48].map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <ChevronsLeftRight
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#6b7280]"
-                  size={16}
+        {!loading && error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && grades.length === 0 && (
+          <div className="py-20 text-center text-sm text-[#5b626a]">
+            No grades found
+          </div>
+        )}
+
+        {!loading && !error && grades.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {grades.map((grade) => (
+                <GradeCard
+                  key={grade.id}
+                  grade={grade}
+                  onDelete={() => setDeleteTarget(grade)}
+                  onEdit={() => setEditTarget(grade)}
                 />
-              </label>
+              ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={!pagination.hasPrev}
-                onClick={() => setPage((v) => Math.max(v - 1, 1))}
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <ChevronLeft size={17} />
-                Prev
-              </button>
-              <span>
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={!pagination.hasNext}
-                onClick={() =>
-                  setPage((v) => Math.min(v + 1, pagination.totalPages || v + 1))
-                }
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-                <ChevronRight size={17} />
-              </button>
+            <div className="mt-8 flex flex-col gap-4 ty-caption xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex items-center gap-3">
+                <span>Rows per page</span>
+                <label className="relative inline-flex items-center">
+                  <select
+                    value={limit}
+                    onChange={(event) => {
+                      setLimit(Number(event.target.value));
+                      setPage(1);
+                    }}
+                    className="h-10 appearance-none rounded-[10px] border border-[#c7cbd1] bg-[#f7f9fb] px-4 pr-10 text-[15px] text-[#3a3c42] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
+                  >
+                    {[12, 24, 48].map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronsLeftRight
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#6b7280]"
+                    size={16}
+                  />
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={!pagination.hasPrev}
+                  onClick={() => setPage((v) => Math.max(v - 1, 1))}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft size={17} />
+                  Prev
+                </button>
+                <span>
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={!pagination.hasNext}
+                  onClick={() =>
+                    setPage((v) => Math.min(v + 1, pagination.totalPages || v + 1))
+                  }
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight size={17} />
+                </button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </section>
 
       {showAddModal && (
         <AddGradeModal

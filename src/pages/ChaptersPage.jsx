@@ -302,7 +302,7 @@ function ChapterEditModal({ chapter, textbookTitle, onClose, onSuccess }) {
         onSubmit={handleSubmit}
         className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[20px] bg-white px-8 py-8 shadow-xl"
       >
-        <h2 className="mb-6 text-center text-2xl font-bold text-[#20242a]">
+        <h2 className="mb-6 text-center text-[24px] font-bold text-[#20242a]">
           Edit Chapter
         </h2>
 
@@ -551,7 +551,7 @@ function AddChapterModal({ textbook, textbookId, onClose, onSuccess }) {
         onSubmit={handleSubmit}
         className="max-h-[90vh] w-full max-w-[560px] overflow-y-auto rounded-[20px] bg-white px-6 py-7 shadow-xl sm:px-8"
       >
-        <h2 className="mb-7 text-center text-[24px] font-bold text-[#111317]">
+        <h2 className="mb-6 text-center text-[24px] font-bold text-[#20242a]">
           Add Chapter
         </h2>
 
@@ -698,14 +698,14 @@ function AddChapterModal({ textbook, textbookId, onClose, onSuccess }) {
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded-[10px] border border-[#2b7181] py-3 text-sm font-medium text-[#2b7181] transition hover:bg-[#f5fafc] disabled:opacity-50"
+            className="flex-1 rounded-[10px] border border-[#c7cbd1] py-3 text-sm font-medium text-[#5b626a] transition hover:bg-slate-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#2b7181] py-3 text-sm font-semibold text-white transition hover:bg-[#245f6c] disabled:opacity-60"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#155966] py-3 text-sm font-semibold text-white transition hover:bg-[#104a55] disabled:opacity-60"
           >
             {saving && <Loader2 size={16} className="animate-spin" />}
             {saving ? "Adding..." : "Add Chapter"}
@@ -900,11 +900,11 @@ export default function ChaptersPage() {
             >
               <ArrowLeft size={22} />
             </button>
-            <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+            <h1 className="ty-page-title">
               Chapters
             </h1>
           </div>
-          <p className="mt-2 pl-12 text-[14px] text-[#3f464d]">
+          <p className="mt-2 pl-12 ty-subtitle">
             {title}
             {code}
           </p>
@@ -938,7 +938,7 @@ export default function ChaptersPage() {
       </div>
 
       <section className="rounded-[14px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
-        <h2 className="mb-6 text-[24px] font-semibold leading-none tracking-[0] text-[#20242a]">
+        <h2 className="mb-6 ty-section-heading">
           Chapters List
         </h2>
 
@@ -996,22 +996,22 @@ export default function ChaptersPage() {
                       key={chapter.id}
                       className="border-b border-[#eef0f2] last:border-b-0"
                     >
-                      <td className="px-3 py-4 text-[14px] font-medium text-[#2a2d32]">
+                      <td className="px-3 py-4 ty-table-cell-primary">
                         {truncateText(chapter.title, 24)}
                       </td>
-                      <td className="px-3 py-4 text-[14px] text-[#2a2d32]">
+                      <td className="px-3 py-4 ty-table-cell">
                         {truncateText(chapter.subTitle, 26)}
                       </td>
-                      <td className="px-3 py-4 text-[14px] text-[#2a2d32]">
+                      <td className="px-3 py-4 ty-table-cell">
                         {truncateText(chapter.code, 16)}
                       </td>
-                      <td className="px-3 py-4 text-[14px] text-[#2a2d32]">
+                      <td className="px-3 py-4 ty-table-cell">
                         {truncateText(chapter.description, 28)}
                       </td>
-                      <td className="px-3 py-4 text-[14px] text-[#2a2d32]">
+                      <td className="px-3 py-4 ty-table-cell">
                         {truncateText(chapter.textbook, 24)}
                       </td>
-                      <td className="px-3 py-4 text-[14px] text-[#2a2d32]">
+                      <td className="px-3 py-4 ty-table-cell">
                         {chapter.status}
                       </td>
                       <td className="px-3 py-4 text-right">
@@ -1028,7 +1028,7 @@ export default function ChaptersPage() {
               </table>
             </div>
 
-            <div className="mt-6 flex flex-col gap-4 text-sm text-[#3a3c42] xl:flex-row xl:items-center xl:justify-between">
+            <div className="mt-6 flex flex-col gap-4 ty-caption xl:flex-row xl:items-center xl:justify-between">
               <span>
                 {startRow}-{endRow} of {totalChapters}
               </span>
