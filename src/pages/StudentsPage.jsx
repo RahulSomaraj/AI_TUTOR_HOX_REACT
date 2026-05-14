@@ -742,9 +742,8 @@ export default function StudentsPage() {
 
       <div className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Students</h1>
-          {/*  show totalCount from API, with label when filtered */}
-          <p className="text-sm text-gray-400 mt-0.5">
+          <h1 className="ty-page-title">Students</h1>
+          <p className="mt-1 ty-subtitle">
             {filterSchoolId
               ? `${totalCount} Students in selected school`
               : `${totalCount} Students`}
@@ -753,9 +752,9 @@ export default function StudentsPage() {
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-5 py-2.5 rounded-xl transition-colors"
         >
-          <Plus size={16} />
+          <Plus size={18} />
           Add Student
         </button>
       </div>
@@ -784,18 +783,18 @@ export default function StudentsPage() {
       <div className="flex-1 px-8 py-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 pt-5 pb-3">
-            <h2 className="text-lg font-semibold text-gray-800">Students</h2>
+            <h2 className="ty-section-heading">Students</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-y border-gray-100">
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Name</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Email</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Contact</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">School</th>
-                  <th className="text-left px-6 py-3.5 font-medium text-gray-600">Grade</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Name</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Email</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Contact</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">School</th>
+                  <th className="text-left px-6 py-3.5 ty-table-header">Grade</th>
                   <th className="px-6 py-3.5" />
                 </tr>
               </thead>

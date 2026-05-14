@@ -779,8 +779,8 @@ export default function ParentsPage() {
 
       <div className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Parents</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{totalCount} Parents</p>
+          <h1 className="ty-page-title">Parents</h1>
+          <p className="mt-1 ty-subtitle">{totalCount} Parents</p>
         </div>
 
         <button

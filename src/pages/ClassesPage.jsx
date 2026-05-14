@@ -815,10 +815,10 @@ export default function ClassesPage() {
       )}
 
       <div className="flex items-center justify-between px-6 pt-3 pb-5">
-        <h1 className="text-4xl font-bold text-gray-900">Classes</h1>
+        <h1 className="ty-page-title">Classes</h1>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-6 py-3 rounded-xl transition-colors"
         >
           <Plus size={18} />
           Add Class
@@ -841,19 +841,19 @@ export default function ClassesPage() {
 
       <div className="mx-6 mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
         <div className="px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-800">Classes</h2>
+          <h2 className="ty-section-heading">Classes</h2>
         </div>
 
         <div className="overflow-x-auto px-5">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#EEF5F7]">
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 rounded-l-2xl">Class</th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Division</th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">School</th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Board</th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Students</th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">Teacher</th>
+                <th className="text-left px-6 py-4 ty-table-header rounded-l-2xl">Class</th>
+                <th className="text-left px-6 py-4 ty-table-header">Division</th>
+                <th className="text-left px-6 py-4 ty-table-header">School</th>
+                <th className="text-left px-6 py-4 ty-table-header">Board</th>
+                <th className="text-left px-6 py-4 ty-table-header">Students</th>
+                <th className="text-left px-6 py-4 ty-table-header">Teacher</th>
                 <th className="px-6 py-4 rounded-r-2xl" />
               </tr>
             </thead>
@@ -873,22 +873,22 @@ export default function ClassesPage() {
               ) : (
                 classes.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
+                    <td className="px-6 py-4 ty-table-cell-primary">
                       {c.aliasName || c.name || c.className || "-"}
                     </td>
-                    <td className="px-6 py-4 text-gray-800">
+                    <td className="px-6 py-4 ty-table-cell">
                       {c.division || (c.aliasName?.includes("-") ? c.aliasName.split("-").pop() : "-")}
                     </td>
-                    <td className="px-6 py-4 text-gray-800">{c.school?.schoolName || c.school?.name || c.schoolName || "-"}</td>
-                    <td className="px-6 py-4 text-gray-800">{boardsMap[c.boardId] || c.board?.name || c.boardName || "-"}</td>
-                    <td className="px-6 py-4 text-gray-800">
+                    <td className="px-6 py-4 ty-table-cell">{c.school?.schoolName || c.school?.name || c.schoolName || "-"}</td>
+                    <td className="px-6 py-4 ty-table-cell">{boardsMap[c.boardId] || c.board?.name || c.boardName || "-"}</td>
+                    <td className="px-6 py-4 ty-table-cell">
                       {c.noOfStudents ??
                          c._count?.students ??
                          c.studentCount ??
                          studentCounts[c.id] ??
                       0}
                    </td>
-                    <td className="px-6 py-4 text-gray-800">
+                    <td className="px-6 py-4 ty-table-cell">
                       {c.teacher
                         ? (c.teacher.name || `${c.teacher.firstName || ""} ${c.teacher.lastName || ""}`.trim() || "-")
                         : (c.teacherName || "-")}
@@ -908,10 +908,10 @@ export default function ClassesPage() {
 
         {!loading && totalCount > 0 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 ty-caption">
               <span>Rows per page</span>
               <RowsPerPageSelect value={itemsPerPage} onChange={handleItemsPerPageChange} />
-              <span className="ml-2 text-gray-500">
+              <span className="ml-2">
                 {rangeStart}-{rangeEnd} of {totalCount}
               </span>
             </div>
@@ -932,7 +932,7 @@ export default function ClassesPage() {
                 Next
                 <ChevronRight size={15} />
               </button>
-              <span className="text-sm text-gray-500 ml-1">
+              <span className="ty-caption ml-1">
                 Page {page} of {totalPages}
               </span>
             </div>

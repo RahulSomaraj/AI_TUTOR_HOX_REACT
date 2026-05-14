@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   createBoardGrade,
   deleteBoardGrade,
   fetchBoardGrades,
+  updateBoardGrade,
 } from "../api/authService";
 
 function extractGrades(response) {
@@ -78,6 +79,7 @@ function mapGradeRow(grade) {
   return {
     id: grade?.id ?? grade?._id ?? grade?.gradeId ?? crypto.randomUUID(),
     name: grade?.name ?? grade?.gradeName ?? grade?.title ?? "Not available",
+    boardId: grade?.boardId ?? null,
     description: grade?.description ?? grade?.details ?? "",
     isActive: grade?.isActive ?? grade?.active ?? true,
     syllabusProgress: grade?.syllabusProgress ?? 0,
@@ -217,7 +219,122 @@ function AddGradeModal({ boardId, onClose, onSuccess }) {
   );
 }
 
-function GradeCardMenu({ onDelete }) {
+function EditGradeModal({ grade, existingGrades, onClose, onSuccess }) {
+  const [name, setName] = useState(grade.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && !saving) onClose();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, saving]);
+
+  const trimmedName = name.trim();
+  const isDuplicate = existingGrades.some(
+    (g) => g.id !== grade.id && g.name.toLowerCase() === trimmedName.toLowerCase()
+  );
+  const isUnchanged = trimmedName === grade.name;
+  const saveDisabled = saving || !trimmedName || isUnchanged || isDuplicate;
+
+  async function handleSave() {
+    if (saveDisabled) return;
+    try {
+      setSaving(true);
+      setError("");
+      await updateBoardGrade(grade.id, {
+        name: trimmedName,
+        boardId: grade.boardId,
+      });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to update grade. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !saving) onClose();
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-white px-8 py-7 shadow-[0_24px_60px_rgba(16,38,48,0.18)]">
+        <h2 className="mb-6 text-center text-[22px] font-bold text-[#20242a]">
+          Edit Grade
+        </h2>
+
+        <div className="space-y-2">
+          <span className="block text-[14px] font-medium text-[#334155]">
+            Name
+          </span>
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSave();
+              }
+            }}
+            placeholder="Enter grade name"
+            disabled={saving}
+            className="h-11 w-full rounded-[10px] border border-[#6c5ecf] bg-white px-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#94a3b8] focus:border-[#6c5ecf] focus:ring-2 focus:ring-[#6c5ecf]/15 disabled:bg-slate-50"
+          />
+          {isDuplicate && trimmedName && (
+            <p className="text-xs text-red-600">
+              A grade with this name already exists.
+            </p>
+          )}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-[14px] border border-[#cdd7dc] py-2.5 text-[15px] font-medium text-[#44525b] transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saveDisabled}
+            className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#155966] py-2.5 text-[15px] font-semibold text-white transition hover:bg-[#104a55] disabled:opacity-70"
+          >
+            {saving && <Loader2 size={15} className="animate-spin" />}
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GradeCardMenu({ onDelete, onEdit }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -246,6 +363,10 @@ function GradeCardMenu({ onDelete }) {
         >
           <button
             type="button"
+            onClick={() => {
+              setOpen(false);
+              onEdit();
+            }}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[#20242a] transition hover:bg-[#f3f8fa]"
           >
             Edit
@@ -300,12 +421,12 @@ function DeleteGradeModal({ gradeName, deleting, onCancel, onConfirm }) {
   );
 }
 
-function GradeCard({ grade, onDelete }) {
+function GradeCard({ grade, onDelete, onEdit }) {
   return (
     <div className="flex flex-col rounded-2xl bg-white p-5 shadow-[0_2px_12px_rgba(18,53,64,0.07)]">
       <div className="mb-4 flex items-start justify-between">
         <span className="text-[20px] font-bold text-[#20242a]">{grade.name}</span>
-        <GradeCardMenu onDelete={onDelete} />
+        <GradeCardMenu onDelete={onDelete} onEdit={onEdit} />
       </div>
 
       <div className="mb-4 flex items-center gap-3">
@@ -359,6 +480,7 @@ export default function BoardGradesPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
 
   const queryParams = useMemo(
     () => ({
@@ -456,29 +578,31 @@ export default function BoardGradesPage() {
   return (
     <div className="min-h-screen bg-[#eef6f9] px-4 py-7 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#cdd7dc] text-[#5b626a] transition hover:bg-white"
+            className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#cdd7dc] text-[#5b626a] transition hover:bg-white"
           >
             <ArrowLeft size={17} />
           </button>
-          <h1 className="text-[26px] font-bold leading-tight text-[#20242a]">
-            Board Grades{" "}
-            <span className="text-[22px] font-semibold text-[#5b626a]">
-              ({totalGrades} total)
-            </span>
-          </h1>
+          <div>
+            <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+              Board Grades
+            </h1>
+            <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
+              {totalGrades} Board Grades
+            </p>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="flex h-[48px] w-full items-center justify-center gap-2 rounded-md bg-[#155966] px-6 text-[16px] font-semibold text-white transition hover:bg-[#104a55] sm:w-auto"
+          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
         >
-          <Plus size={20} strokeWidth={2.2} />
+          <Plus size={22} strokeWidth={2.2} />
           Add Grade
         </button>
       </div>
@@ -532,6 +656,7 @@ export default function BoardGradesPage() {
                 key={grade.id}
                 grade={grade}
                 onDelete={() => setDeleteTarget(grade)}
+                onEdit={() => setEditTarget(grade)}
               />
             ))}
           </div>
@@ -608,6 +733,15 @@ export default function BoardGradesPage() {
           deleting={deleting}
           onCancel={() => !deleting && setDeleteTarget(null)}
           onConfirm={handleDeleteGrade}
+        />
+      )}
+
+      {editTarget && (
+        <EditGradeModal
+          grade={editTarget}
+          existingGrades={grades}
+          onClose={() => setEditTarget(null)}
+          onSuccess={() => setReloadKey((v) => v + 1)}
         />
       )}
     </div>

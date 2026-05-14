@@ -1,3 +1,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  /* Page title — <h1> on every list/admin page */
+  .ty-page-title {
+    @apply text-[32px] font-bold leading-tight tracking-[0] text-[#20242a];
+  }
+
+  /* Subtitle / count line directly below the page title */
+  .ty-subtitle {
+    @apply text-[18px] leading-none tracking-[0] text-[#20242a];
+  }
+
+  /* Section heading — <h2> inside the white content card, above the table */
+  .ty-section-heading {
+    @apply text-[24px] font-semibold leading-none tracking-[0] text-[#20242a];
+  }
+
+  /* Table column header — <th> */
+  .ty-table-header {
+    @apply text-[16px] font-medium text-[#16191d];
+  }
+
+  /* Table cell — primary / name column (semibold) */
+  .ty-table-cell-primary {
+    @apply text-[15px] font-medium text-[#2a2d32];
+  }
+
+  /* Table cell — secondary columns */
+  .ty-table-cell {
+    @apply text-[15px] text-[#2a2d32];
+  }
+
+  /* Pagination and helper caption text */
+  .ty-caption {
+    @apply text-sm text-[#3a3c42];
+  }
+
+  /* Muted secondary text (empty states, descriptions) */
+  .ty-muted {
+    @apply text-[#5b626a];
+  }
+}

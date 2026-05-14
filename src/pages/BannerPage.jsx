@@ -346,10 +346,10 @@ export default function BannerPage() {
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Banner</h1>
+        <h1 className="ty-page-title">Banner</h1>
         <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
-          <Plus size={16} /> Add Banner
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-5 py-2.5 rounded-xl transition-colors">
+          <Plus size={18} /> Add Banner
         </button>
       </div>
 

@@ -314,6 +314,11 @@ export async function deleteBoardGrade(id) {
   return data;
 }
 
+export async function updateBoardGrade(id, payload) {
+  const { data } = await api.patch(`/board-grades/${id}`, payload);
+  return data;
+}
+
 export async function fetchStudentById(id) {
   const { data } = await api.get(`/users/${id}`);
   return data?.data ?? data;
