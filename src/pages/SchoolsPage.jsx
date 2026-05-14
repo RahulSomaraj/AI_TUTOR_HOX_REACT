@@ -121,14 +121,18 @@ function mapSchoolRow(school, boardOptions = []) {
       matchedBoard?.name ??
       "Not available",
     schoolCode: school?.schoolCode ?? school?.code ?? "",
-    image:
-      (Array.isArray(school?.image) ? school.image[0] : "") ??
-      school?.schoolImage ??
-      school?.image ??
-      school?.imageUrl ??
-      school?.logo ??
-      school?.thumbnail ??
-      "",
+    image: (() => {
+      const raw = school?.image;
+      if (Array.isArray(raw)) return raw[0] ?? "";
+      if (typeof raw === "string" && raw) return raw;
+      return (
+        school?.schoolImage ??
+        school?.imageUrl ??
+        school?.logo ??
+        school?.thumbnail ??
+        ""
+      );
+    })(),
   };
 }
 
@@ -286,7 +290,7 @@ function SchoolModal({
     address: initialData?.address ?? "",
     schoolCode: initialData?.schoolCode ?? "",
     boardId: initialData?.boardId ?? "",
-    schoolImage: initialData?.image ?? "",
+    schoolImage: typeof initialData?.image === "string" ? initialData.image : "",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
