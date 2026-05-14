@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, ChevronDown, Check } from "lucide-react";
 
-// ── Reusable searchable dropdown ──────────────────────────────────────
-const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loading }) => {
+const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {
   const [open,   setOpen]   = useState(false);
   const [query,  setQuery]  = useState("");
   const ref = useRef(null);
@@ -14,9 +13,12 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loa
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = options.filter((o) =>
-    o.name.toLowerCase().includes(query.toLowerCase())
-  );
+  //  call API on query change (debounced 400ms)
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => { onSearch?.(query); }, 400);
+    return () => clearTimeout(t);
+  }, [query, open]);
 
   const selectedLabel = options.find((o) => String(o.id) === String(value))?.name ?? "";
 
@@ -26,12 +28,19 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loa
     setQuery("");
   };
 
+  const handleToggle = () => {
+    if (disabled || loading) return;
+    const opening = !open;
+    setOpen(opening);
+    if (opening) { setQuery(""); onOpen?.(); }
+  };
+
   return (
     <div className="relative w-full" ref={ref}>
       {/* Trigger button */}
       <button
         type="button"
-        onClick={() => { if (!disabled && !loading) setOpen((v) => !v); }}
+        onClick={handleToggle}
         className={`w-full flex items-center justify-between pl-3 pr-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors
           ${disabled || loading ? "opacity-50 cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-600 hover:bg-gray-50"}`}
       >
@@ -70,10 +79,12 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loa
                 Clear selection
               </li>
             )}
-            {filtered.length === 0 ? (
+            {loading ? (
+              <li className="px-3 py-2 text-sm text-gray-400 text-center">Loading...</li>
+            ) : options.length === 0 ? (
               <li className="px-3 py-2 text-sm text-gray-400 text-center">No results</li>
             ) : (
-              filtered.map((o) => (
+              options.map((o) => (
                 <li
                   key={o.id}
                   onClick={() => handleSelect(o.id)}
@@ -92,7 +103,7 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loa
   );
 };
 
-// ── Main filters component ────────────────────────────────────────────
+//  Main filters component
 const AttendanceFilters = ({
   searchQuery,
   onSearchChange,
@@ -107,6 +118,10 @@ const AttendanceFilters = ({
   attendanceTypes,
   loadingSchools,
   loadingGrades,
+  onSchoolOpen,
+  onSchoolSearch,
+  onGradeOpen,
+  onGradeSearch,
 }) => {
   return (
     <div className="flex items-center gap-3">
@@ -131,6 +146,8 @@ const AttendanceFilters = ({
           options={schools}
           placeholder="Select school"
           loading={loadingSchools}
+          onOpen={onSchoolOpen}
+          onSearch={onSchoolSearch}
         />
       </div>
 
@@ -149,6 +166,8 @@ const AttendanceFilters = ({
           }
           disabled={!selectedSchool || selectedType === "teacher"}
           loading={loadingGrades}
+          onOpen={onGradeOpen}
+          onSearch={onGradeSearch}
         />
       </div>
 

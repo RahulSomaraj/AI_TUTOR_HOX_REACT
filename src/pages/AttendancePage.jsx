@@ -23,62 +23,77 @@ const toApiDate = (s) => {
   return `${d}-${m}-${y}`;
 };
 
+const DROPDOWN_LIMIT = 10;
+
+//  School Search Hook 
+function useSchoolSearch() {
+  const [schools,       setSchools]       = useState([]);
+  const [loadingSchools, setLoadingSchools] = useState(false);
+
+  const loadSchools = useCallback(async (query = "") => {
+    setLoadingSchools(true);
+    try {
+      let all = [], page = 1;
+      while (true) {
+        const res  = await fetchSchools({ page, limit: DROPDOWN_LIMIT, schoolName: query });
+        const raw  = res?.data?.schools || res?.data?.data || res?.data || [];
+        const list = Array.isArray(raw) ? raw : [];
+        all = [...all, ...list];
+        if (list.length < DROPDOWN_LIMIT) break;
+        page++;
+      }
+      setSchools(all.map((s) => ({ id: s.id, name: s.schoolName || s.name })));
+    } catch {
+      setSchools([]);
+    } finally {
+      setLoadingSchools(false);
+    }
+  }, []);
+
+  return { schools, loadingSchools, loadSchools };
+}
+
+//  Main Component 
 const Attendance = () => {
   const today = toDateStr(new Date());
 
-  // ── Header date range ──────────────────────────────────────────────
+  //  Header date range 
   const [startDate, setStartDate] = useState("");
   const [endDate,   setEndDate]   = useState("");
 
-  // ── Modal open state ───────────────────────────────────────────────
+  //  Modal open state 
   const [startModalOpen, setStartModalOpen] = useState(false);
   const [endModalOpen,   setEndModalOpen]   = useState(false);
   const [addModalOpen,   setAddModalOpen]   = useState(false);
 
-  // ── Toast ──────────────────────────────────────────────────────────
+  //  Toast
   const [toast, setToast] = useState("");
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
   };
 
-  // ── Filter state ───────────────────────────────────────────────────
+  //  Filter state 
   const [searchQuery,    setSearchQuery]    = useState("");
   const [selectedSchool, setSelectedSchool] = useState("");
   const [selectedGrade,  setSelectedGrade]  = useState("");
   const [selectedType,   setSelectedType]   = useState("");
 
-  // ── Calendar selected date ─────────────────────────────────────────
+  //  Calendar selected date 
   const [selectedDate, setSelectedDate] = useState(today);
 
-  // ── Data state ─────────────────────────────────────────────────────
-  const [schools,    setSchools]    = useState([]);
+  //  Data state 
   const [grades,     setGrades]     = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [stats,      setStats]      = useState({ total: null, present: null, absent: null, late: null });
 
-  // ── Loading ────────────────────────────────────────────────────────
-  const [loadingSchools,    setLoadingSchools]    = useState(false);
+  //  Loading 
   const [loadingGrades,     setLoadingGrades]     = useState(false);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
-  // ── 1. Load schools on mount ───────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      setLoadingSchools(true);
-      try {
-        const res = await fetchSchools();
-        setSchools(res?.data ?? []);
-      } catch (e) {
-        console.error("Failed to load schools:", e);
-      } finally {
-        setLoadingSchools(false);
-      }
-    };
-    load();
-  }, []);
+  const { schools, loadingSchools, loadSchools } = useSchoolSearch();
 
-  // ── 2. Load grades when school changes — only for student type ─────
+  // ── 2. Load grades when school changes — only for student type 
   useEffect(() => {
     setSelectedGrade("");
     setGrades([]);
@@ -107,7 +122,28 @@ const Attendance = () => {
     load();
   }, [selectedSchool, selectedType]);
 
-  // ── 3. Load attendance ─────────────────────────────────────────────
+  // ──  Search grades  ──
+  const searchGrades = useCallback(async (query = "") => {
+    if (!selectedSchool || selectedType === "teacher") return;
+    setLoadingGrades(true);
+    try {
+      let allGrades = [], page = 1;
+      while (true) {
+        const res = await fetchClasses({ schoolId: selectedSchool, page, limit: 10, aliasName: query });
+        const pageData = res?.data ?? [];
+        allGrades = [...allGrades, ...pageData];
+        if (!res?.pagination?.hasNext) break;
+        page++;
+      }
+      setGrades(allGrades);
+    } catch (e) {
+      console.error("Failed to search grades:", e);
+    } finally {
+      setLoadingGrades(false);
+    }
+  }, [selectedSchool, selectedType]);
+
+  // ── 3. Load attendance 
   const loadAttendance = useCallback(async () => {
     if (!selectedSchool) {
       setAttendance([]);
@@ -186,7 +222,7 @@ const Attendance = () => {
     loadAttendance();
   }, [loadAttendance]);
 
-  // ── 4. Download Report (base64 CSV) ───────────────────────────────
+  // ── 4. Download Report (base64 CSV) 
   const handleDownloadReport = async () => {
     if (!startDate || !endDate) {
       alert("Please select a start and end date before downloading.");
@@ -237,13 +273,13 @@ const Attendance = () => {
     }
   };
 
-  // ── 5. After add modal saves — refresh table ───────────────────────
+  // ── 5. After add modal saves  
   const handleAddSubmit = () => {
     loadAttendance();
   };
 
-  // ── Shape data for child components ───────────────────────────────
-  const schoolOptions = schools.map((s) => ({ id: s.id, name: s.schoolName }));
+  // ── Shape data for child components 
+  const schoolOptions = schools.map((s) => ({ id: s.id, name: s.name }));
   const gradeOptions  = grades.map((g)  => ({ id: g.id, name: g.aliasName ?? g.name }));
 
   // Handle both student and teacher name/id fields from API
@@ -265,7 +301,7 @@ const Attendance = () => {
   return (
     <div className="flex-1 flex flex-col min-h-screen">
 
-      {/* ── Page Header — no card, matches Classes & Banner pages ── */}
+      {/* ── Page Header  ── */}
       <div className="px-6 pt-3 pb-5">
         <AttendanceHeader
           startDate={startDate}
@@ -277,7 +313,7 @@ const Attendance = () => {
         />
       </div>
 
-      {/* ── Filters Card — white card, matches Classes & Banner pages ── */}
+      {/* ── Filters Card  ── */}
       <div className="mx-6 mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
         <AttendanceFilters
           searchQuery={searchQuery}
@@ -293,6 +329,10 @@ const Attendance = () => {
           attendanceTypes={attendanceTypes}
           loadingSchools={loadingSchools}
           loadingGrades={loadingGrades}
+          onSchoolOpen={loadSchools}
+          onSchoolSearch={loadSchools}
+          onGradeOpen={() => searchGrades("")}
+          onGradeSearch={searchGrades}
         />
       </div>
 
@@ -309,7 +349,7 @@ const Attendance = () => {
           />
         </div>
 
-        {/* ── Right Sidebar (calendar & stats unchanged) ── */}
+        {/* ── Right Sidebar  ── */}
         <div className="w-64 flex-shrink-0">
           <AttendanceCalendar
             selectedDate={selectedDate}
@@ -326,7 +366,7 @@ const Attendance = () => {
         </div>
       </div>
 
-      {/* ── Modals (unchanged) ── */}
+      {/* ── Modals  ── */}
       <DatePickerModal
         isOpen={startModalOpen}
         onClose={() => setStartModalOpen(false)}

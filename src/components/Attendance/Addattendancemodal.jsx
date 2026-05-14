@@ -3,8 +3,8 @@ import { Search, ChevronDown, Check, Calendar } from "lucide-react";
 import DatePickerModal from "./DatePickerModal";
 import { fetchSchools, fetchClasses, fetchAllStudents, fetchTeachers, createAttendance } from "../../api/authService";
 
-// ── Searchable dropdown ───────────────────────────────────────────────
-const SearchableSelect = ({ label, value, onChange, options, placeholder, disabled, loading }) => {
+//  Searchable dropdown 
+const SearchableSelect = ({ label, value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {
   const [open,  setOpen]  = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef(null);
@@ -15,12 +15,22 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, disabl
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = options.filter((o) =>
-    o.label.toLowerCase().includes(query.toLowerCase())
-  );
-  const selectedLabel = options.find((o) => o.value === value)?.label ?? "";
+  //  call API on query change (debounced 400ms)
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => { onSearch?.(query); }, 400);
+    return () => clearTimeout(t);
+  }, [query, open]);
 
-  const handleSelect = (val) => { onChange(val); setOpen(false); setQuery(""); };
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? "";
+  const handleSelect  = (val) => { onChange(val); setOpen(false); setQuery(""); };
+
+  const handleToggle = () => {
+    if (disabled || loading) return;
+    const opening = !open;
+    setOpen(opening);
+    if (opening) { setQuery(""); onOpen?.(); }
+  };
 
   return (
     <div className="flex flex-col gap-1">
@@ -28,8 +38,8 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, disabl
       <div className="relative" ref={ref}>
         <button
           type="button"
-          onClick={() => { if (!disabled && !loading) setOpen((v) => !v); }}
-          className={`w-full flex items-center justify-between pl-3 pr-2.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors
+          onClick={handleToggle}
+          className={`w-full flex items-center justify-between pl-3 pr-2.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-[#f3eef7] focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors
             ${disabled || loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50"}`}
         >
           <span className={selectedLabel ? "text-gray-700" : "text-gray-400"}>
@@ -39,7 +49,7 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, disabl
         </button>
 
         {open && (
-          <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+          <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-[#f3eef7] border border-gray-200 rounded-xl shadow-lg z-50">
             <div className="p-2 border-b border-gray-100">
               <div className="relative">
                 <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -54,10 +64,12 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, disabl
               </div>
             </div>
             <ul className="max-h-44 overflow-y-auto py-1">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <li className="px-3 py-2 text-xs text-gray-400 text-center">Loading...</li>
+              ) : options.length === 0 ? (
                 <li className="px-3 py-2 text-xs text-gray-400 text-center">No results</li>
               ) : (
-                filtered.map((o) => (
+                options.map((o) => (
                   <li
                     key={o.value}
                     onClick={() => handleSelect(o.value)}
@@ -77,7 +89,6 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, disabl
   );
 };
 
-// ── Plain select (no search) ──────────────────────────────────────────
 const PlainSelect = ({ label, value, onChange, options, placeholder, disabled }) => (
   <div className="flex flex-col gap-1">
     <label className="text-sm text-gray-600">{label}</label>
@@ -86,7 +97,7 @@ const PlainSelect = ({ label, value, onChange, options, placeholder, disabled })
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className={`w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors
+        className={`w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg text-sm bg-[#f3eef7] focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors
           ${disabled ? "opacity-50 cursor-not-allowed text-gray-400" : "text-gray-700 cursor-pointer"}`}
       >
         <option value="" disabled>{placeholder}</option>
@@ -99,7 +110,6 @@ const PlainSelect = ({ label, value, onChange, options, placeholder, disabled })
   </div>
 );
 
-// ── Static data ───────────────────────────────────────────────────────
 const ATTENDANCE_TYPES = [
   { value: "student", label: "Student" },
   { value: "teacher", label: "Teacher" },
@@ -121,7 +131,7 @@ const formatDateDisplay = (s) => {
   return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
-// ── Main modal ────────────────────────────────────────────────────────
+//  Main modal
 const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
   const isTeacher = (type) => type === "teacher";
 
@@ -135,100 +145,110 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
   // Data lists
   const [schools,  setSchools]  = useState([]);
   const [grades,   setGrades]   = useState([]);
-  const [persons,  setPersons]  = useState([]); 
+  const [persons,  setPersons]  = useState([]);
 
   // Loading flags
   const [loadingSchools,  setLoadingSchools]  = useState(false);
   const [loadingGrades,   setLoadingGrades]   = useState(false);
   const [loadingPersons,  setLoadingPersons]  = useState(false);
 
-  // Reset & load schools on open
+  //  Reset on modal open 
   useEffect(() => {
     if (!isOpen) return;
     setForm({ attendanceType: "", school: "", grade: "", status: "", person: "", date: "" });
+    setSchools([]);
     setGrades([]);
     setPersons([]);
     setError("");
     setDatePickerOpen(false);
-
-    const load = async () => {
-      setLoadingSchools(true);
-      try {
-        const res = await fetchSchools();
-        setSchools((res?.data ?? []).map((s) => ({ value: String(s.id), label: s.schoolName })));
-      } catch (e) {
-        console.error("Schools load error:", e);
-      } finally {
-        setLoadingSchools(false);
-      }
-    };
-    load();
   }, [isOpen]);
 
-  // Load grades when school selected (skip for teacher)
+  //  Reset grades + persons when school or type changes 
   useEffect(() => {
     setGrades([]);
-    if (!form.school || isTeacher(form.attendanceType)) return;
-
-    const load = async () => {
-      setLoadingGrades(true);
-      try {
-        let all = [], page = 1;
-        while (true) {
-          const res = await fetchClasses({ schoolId: form.school, page, limit: 10, aliasName: "" });
-          all = [...all, ...(res?.data ?? [])];
-          if (!res?.pagination?.hasNext) break;
-          page++;
-        }
-        setGrades(all.map((g) => ({ value: String(g.id), label: g.aliasName ?? g.name })));
-      } catch (e) {
-        console.error("Grades load error:", e);
-      } finally {
-        setLoadingGrades(false);
-      }
-    };
-    load();
+    setPersons([]);
   }, [form.school, form.attendanceType]);
 
-  // Load students when grade selected OR teachers when school selected + teacher type
+  //  Reset persons when grade changes 
   useEffect(() => {
     setPersons([]);
-    const teacher = isTeacher(form.attendanceType);
-
-    // Students need both school + grade; teachers only need school
-    if (!form.school) return;
-    if (!teacher && !form.grade) return;
-
-    const load = async () => {
-      setLoadingPersons(true);
-      try {
-        if (teacher) {
-          const res = await fetchTeachers({ schoolId: form.school, page: 1, limit: 50 });
-          setPersons(
-            (res?.data ?? []).map((t) => ({
-              value: String(t.id),
-              label: [t.firstName, t.lastName].filter(Boolean).join(" ") || t.username || t.name || "—",
-            }))
-          );
-        } else {
-          const res = await fetchAllStudents({ schoolId: form.school, gradeId: form.grade, page: 1, limit: 50 });
-          setPersons(
-            (res?.data ?? []).map((s) => ({
-              value: String(s.id),
-              label: [s.firstName, s.lastName].filter(Boolean).join(" ") || s.username || s.name || "—",
-            }))
-          );
-        }
-      } catch (e) {
-        console.error("Persons load error:", e);
-      } finally {
-        setLoadingPersons(false);
-      }
-    };
-    load();
-  }, [form.school, form.grade, form.attendanceType]);
+  }, [form.grade]);
 
   if (!isOpen) return null;
+
+  //  Load functions 
+  const loadSchools = async (query = "") => {
+    if (loadingSchools) return;
+    setLoadingSchools(true);
+    try {
+      let all = [], page = 1;
+      while (true) {
+        const res  = await fetchSchools({ page, limit: 10, schoolName: query });
+        const raw  = res?.data?.schools || res?.data?.data || res?.data || [];
+        const list = Array.isArray(raw) ? raw : [];
+        all = [...all, ...list];
+        if (list.length < 10) break;
+        page++;
+      }
+      setSchools(all.map((s) => ({ value: String(s.id), label: s.schoolName || s.name })));
+    } catch (e) {
+      console.error("Schools load error:", e);
+    } finally {
+      setLoadingSchools(false);
+    }
+  };
+
+  const loadGrades = async (query = "") => {
+    if (!form.school || isTeacher(form.attendanceType) || loadingGrades) return;
+    setLoadingGrades(true);
+    try {
+      let all = [], page = 1;
+      while (true) {
+        const res  = await fetchClasses({ schoolId: form.school, page, limit: 10, aliasName: query });
+        const list = res?.data ?? [];
+        all = [...all, ...list];
+        if (!res?.pagination?.hasNext) break;
+        page++;
+      }
+      setGrades(all.map((g) => ({ value: String(g.id), label: g.aliasName ?? g.name })));
+    } catch (e) {
+      console.error("Grades load error:", e);
+    } finally {
+      setLoadingGrades(false);
+    }
+  };
+
+  const loadPersons = async (query = "") => {
+    if (!form.school || loadingPersons) return;
+    const teacher = isTeacher(form.attendanceType);
+    if (!teacher && !form.grade) return;
+    setLoadingPersons(true);
+    try {
+      if (teacher) {
+        const res = await fetchTeachers({ schoolId: form.school, page: 1, limit: 50, name: query });
+        const raw = res?.data?.users || res?.data?.data || res?.data || [];
+        setPersons(
+          (Array.isArray(raw) ? raw : []).map((t) => ({
+            value: String(t.id),
+            label: [t.firstName, t.lastName].filter(Boolean).join(" ") || t.username || t.name || "—",
+          }))
+        );
+      } else {
+        const res = await fetchAllStudents({ schoolId: form.school, gradeId: form.grade, page: 1, limit: 50, name: query });
+        const raw = res?.data?.students || res?.data?.data || res?.data || [];
+        setPersons(
+          (Array.isArray(raw) ? raw : []).map((s) => ({
+            value: String(s.id),
+            label: [s.firstName, s.lastName].filter(Boolean).join(" ") || s.username || s.name || "—",
+          }))
+        );
+      }
+    } catch (e) {
+      console.error("Persons load error:", e);
+    } finally {
+      setLoadingPersons(false);
+    }
+  };
 
   const set = (key) => (val) => {
     setForm((prev) => {
@@ -279,12 +299,12 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-        <div className="bg-white rounded-2xl shadow-2xl w-[680px] p-7">
+        <div className="bg-[#f3eef7] rounded-2xl shadow-2xl w-[680px] p-7">
           <h2 className="text-lg font-bold text-gray-800 mb-5">Add Attendance</h2>
 
           {/* Row 1: Type | School | Grade */}
           <div className="grid grid-cols-3 gap-4 mb-4">
-            {/* Attendance type — plain select, no search needed */}
+            {/* Attendance type  */}
             <PlainSelect
               label="Select attendance type"
               value={form.attendanceType}
@@ -299,6 +319,8 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
               options={schools}
               placeholder="Select school"
               loading={loadingSchools}
+              onOpen={loadSchools}
+              onSearch={loadSchools}
             />
             {/* Grade — disabled & special placeholder for teachers */}
             <SearchableSelect
@@ -315,6 +337,8 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
               }
               disabled={!form.school || teacher}
               loading={!teacher && loadingGrades}
+              onOpen={loadGrades}
+              onSearch={loadGrades}
             />
           </div>
 
@@ -344,6 +368,8 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
               }
               disabled={!form.school || (!teacher && !form.grade)}
               loading={loadingPersons}
+              onOpen={loadPersons}
+              onSearch={loadPersons}
             />
 
             {/* Date */}
@@ -351,7 +377,7 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
               <label className="text-sm text-gray-600">Select date</label>
               <button
                 onClick={() => setDatePickerOpen(true)}
-                className="w-full flex items-center justify-between pl-3 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full flex items-center justify-between pl-3 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-[#f3eef7] hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <span className={form.date ? "text-gray-700" : "text-gray-400"}>
                   {form.date ? formatDateDisplay(form.date) : "Choose date"}
