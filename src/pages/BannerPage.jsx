@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Search, MoreHorizontal, Plus, X, Loader2,
-  ChevronLeft, ChevronRight, Pencil, Trash2, Upload,
+  Pencil, Trash2, Upload,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   fetchBanners, createBanner, updateBanner, deleteBanner, uploadFile,
 } from "../api/authService";
@@ -282,6 +283,7 @@ export default function BannerPage() {
   const [banners, setBanners]       = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage]             = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [search, setSearch]         = useState("");
   const [loading, setLoading]       = useState(false);
   const [showAdd, setShowAdd]       = useState(false);
@@ -289,11 +291,11 @@ export default function BannerPage() {
   const [deleteId, setDeleteId]     = useState(null);
   const [deleting, setDeleting]     = useState(false);
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const loadBanners = useCallback(() => {
     setLoading(true);
-    const params = { page, limit: ITEMS_PER_PAGE };
+    const params = { page, limit: itemsPerPage };
     if (search.trim()) params.title = search.trim();
 
     fetchBanners(params)
@@ -309,7 +311,7 @@ export default function BannerPage() {
       })
       .catch(() => { setBanners([]); setTotalCount(0); })
       .finally(() => setLoading(false));
-  }, [page, search]);
+  }, [page, itemsPerPage, search]);
 
   useEffect(() => { loadBanners(); }, [loadBanners]);
 
@@ -445,22 +447,26 @@ export default function BannerPage() {
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400">Page {page} of {totalPages || 1}</p>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                <ChevronLeft size={13} /> Prev
-              </button>
-              <button onClick={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
-                disabled={page >= (totalPages || 1) || loading}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                Next <ChevronRight size={13} />
-              </button>
-            </div>
-          </div>
+          <PaginationControls
+            className="border-t border-gray-100 px-6 py-4"
+            rowsPerPage={itemsPerPage}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={(nextItemsPerPage) => {
+              setItemsPerPage(nextItemsPerPage);
+              setPage(1);
+            }}
+            rangeLabel={`${totalCount === 0 ? 0 : (page - 1) * itemsPerPage + 1}-${Math.min(
+              page * itemsPerPage,
+              totalCount
+            )} of ${totalCount}`}
+            currentPage={page}
+            totalPages={totalPages || 1}
+            hasPrev={page > 1}
+            hasNext={page < (totalPages || 1)}
+            disabled={loading}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
+          />
 
       </div>
     </div>

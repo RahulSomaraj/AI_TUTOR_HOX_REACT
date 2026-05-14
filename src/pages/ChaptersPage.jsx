@@ -3,8 +3,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Copy,
   Eye,
   Loader2,
@@ -15,6 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   createChapter,
   deleteChapter,
@@ -733,6 +732,7 @@ export default function ChaptersPage() {
     hasNext: false,
   });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -782,7 +782,7 @@ export default function ChaptersPage() {
 
         const response = await fetchChapters({
           page,
-          limit: PAGE_SIZE,
+          limit: pageSize,
           textbookId,
         });
         const list = extractList(response, ["chapters"]).map((chapter, index) =>
@@ -791,7 +791,7 @@ export default function ChaptersPage() {
 
         if (!cancelled) {
           setChapters(list);
-          setPagination(extractPagination(response, list.length, PAGE_SIZE));
+          setPagination(extractPagination(response, list.length, pageSize));
         }
       } catch (err) {
         if (!cancelled) {
@@ -802,7 +802,7 @@ export default function ChaptersPage() {
               "Failed to load chapters"
           );
           setChapters([]);
-          setPagination(extractPagination(null, 0, PAGE_SIZE));
+          setPagination(extractPagination(null, 0, pageSize));
         }
       } finally {
         if (!cancelled) {
@@ -815,7 +815,7 @@ export default function ChaptersPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, textbook, textbookId, refreshKey]);
+  }, [page, pageSize, textbook, textbookId, refreshKey]);
 
   const filteredChapters = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -842,8 +842,8 @@ export default function ChaptersPage() {
       ? filteredChapters.length
       : (pagination?.totalCount ?? chapters.length);
   const rowsToShow = search.trim() ? filteredChapters : chapters;
-  const startRow = totalChapters === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const endRow = Math.min(page * PAGE_SIZE, totalChapters);
+  const startRow = totalChapters === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRow = Math.min(page * pageSize, totalChapters);
   const title = textbook?.title ?? textbook?.name ?? "Textbook";
   const code = textbook?.code ? ` - ${textbook.code}` : "";
 
@@ -1028,42 +1028,26 @@ export default function ChaptersPage() {
               </table>
             </div>
 
-            <div className="mt-6 flex flex-col gap-4 ty-caption xl:flex-row xl:items-center xl:justify-between">
-              <span>
-                {startRow}-{endRow} of {totalChapters}
-              </span>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={!pagination.hasPrev}
-                    onClick={() => setPage((value) => Math.max(value - 1, 1))}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={17} />
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!pagination.hasNext}
-                    onClick={() =>
-                      setPage((value) =>
-                        Math.min(value + 1, pagination.totalPages || value + 1)
-                      )
-                    }
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
-
-                <span>
-                  Page {pagination.currentPage} of {pagination.totalPages}
-                </span>
-              </div>
-            </div>
+            <PaginationControls
+              className="mt-6"
+              rowsPerPage={pageSize}
+              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+              rangeLabel={`${startRow}-${endRow} of ${totalChapters}`}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              hasPrev={pagination.hasPrev}
+              hasNext={pagination.hasNext}
+              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+              onNext={() =>
+                setPage((value) =>
+                  Math.min(value + 1, pagination.totalPages || value + 1)
+                )
+              }
+            />
           </>
         )}
       </section>

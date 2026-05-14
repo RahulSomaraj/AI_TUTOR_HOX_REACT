@@ -3,9 +3,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeftRight,
   CirclePlus,
   Loader2,
   MoreHorizontal,
@@ -13,6 +10,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   createBoardGrade,
   deleteBoardGrade,
@@ -548,6 +546,8 @@ export default function BoardGradesPage() {
   }, [queryParams, limit, reloadKey]);
 
   const totalGrades = pagination?.totalCount ?? grades.length;
+  const startRow = totalGrades === 0 ? 0 : (pagination.currentPage - 1) * limit + 1;
+  const endRow = Math.min(pagination.currentPage * limit, totalGrades);
 
   async function handleDeleteGrade() {
     if (!deleteTarget) return;
@@ -663,57 +663,24 @@ export default function BoardGradesPage() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col gap-4 ty-caption xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex items-center gap-3">
-                <span>Rows per page</span>
-                <label className="relative inline-flex items-center">
-                  <select
-                    value={limit}
-                    onChange={(event) => {
-                      setLimit(Number(event.target.value));
-                      setPage(1);
-                    }}
-                    className="h-10 appearance-none rounded-[10px] border border-[#c7cbd1] bg-[#f7f9fb] px-4 pr-10 text-[15px] text-[#3a3c42] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-                  >
-                    {[12, 24, 48].map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronsLeftRight
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#6b7280]"
-                    size={16}
-                  />
-                </label>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  disabled={!pagination.hasPrev}
-                  onClick={() => setPage((v) => Math.max(v - 1, 1))}
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <ChevronLeft size={17} />
-                  Prev
-                </button>
-                <span>
-                  Page {pagination.currentPage} of {pagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={!pagination.hasNext}
-                  onClick={() =>
-                    setPage((v) => Math.min(v + 1, pagination.totalPages || v + 1))
-                  }
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                  <ChevronRight size={17} />
-                </button>
-              </div>
-            </div>
+            <PaginationControls
+              className="mt-8"
+              rowsPerPage={limit}
+              rowsPerPageOptions={[12, 24, 48]}
+              onRowsPerPageChange={(nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              }}
+              rangeLabel={`${startRow}-${endRow} of ${totalGrades}`}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              hasPrev={pagination.hasPrev}
+              hasNext={pagination.hasNext}
+              onPrev={() => setPage((v) => Math.max(v - 1, 1))}
+              onNext={() =>
+                setPage((v) => Math.min(v + 1, pagination.totalPages || v + 1))
+              }
+            />
           </>
         )}
       </section>

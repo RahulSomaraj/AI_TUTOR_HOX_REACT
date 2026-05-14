@@ -15,6 +15,7 @@ import {
   fetchSubjects,
   fetchSyllabi,
 } from "../api/authService";
+import PaginationControls from "../components/PaginationControls";
 
 const PAGE_SIZE = 10;
 
@@ -665,6 +666,7 @@ export default function SyllabusPage() {
   const [isActive] = useState("");
   const [isOptional] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pagination, setPagination] = useState(null);
@@ -747,7 +749,7 @@ export default function SyllabusPage() {
 
         const params = {
           page,
-          limit: PAGE_SIZE,
+          limit: pageSize,
           order: "desc",
           name: selectedCode || search.trim() || undefined,
           boardGradeId: selectedGrade?.boardGradeId || undefined,
@@ -816,10 +818,15 @@ export default function SyllabusPage() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [boardId, selectedCode, isActive, isOptional, page, reloadKey, search, selectedGrade]);
+  }, [boardId, selectedCode, isActive, isOptional, page, pageSize, reloadKey, search, selectedGrade]);
 
   const canGoPrev = pagination?.hasPrev ?? page > 1;
-  const canGoNext = pagination?.hasNext ?? subjects.length === PAGE_SIZE;
+  const canGoNext = pagination?.hasNext ?? subjects.length === pageSize;
+  const currentPage = pagination?.currentPage ?? page;
+  const totalPages = pagination?.totalPages ?? page;
+  const totalSubjects = pagination?.totalCount ?? subjects.length;
+  const startRow = totalSubjects === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endRow = Math.min(currentPage * pageSize, totalSubjects);
 
   return (
     <main className="min-h-full bg-[#edf6f8] px-6 py-6">
@@ -930,31 +937,23 @@ export default function SyllabusPage() {
             <ProgressOverview subjects={subjects} />
           </div>
 
-          {(pagination || subjects.length === PAGE_SIZE || page > 1) && (
-            <div className="mt-5 flex items-center justify-between rounded-lg bg-white px-5 py-3 text-sm text-slate-600 shadow-sm">
-              <span>
-                Page {pagination?.currentPage ?? page}
-                {pagination?.totalPages ? ` of ${pagination.totalPages}` : ""}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={!canGoPrev}
-                  onClick={() => setPage((value) => Math.max(value - 1, 1))}
-                  className="rounded border border-slate-200 px-3 py-2 font-medium transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={!canGoNext}
-                  onClick={() => setPage((value) => value + 1)}
-                  className="rounded border border-slate-200 px-3 py-2 font-medium transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+          {(pagination || subjects.length === pageSize || page > 1) && (
+            <PaginationControls
+              className="mt-5 rounded-lg bg-white px-5 py-3 shadow-sm"
+              rowsPerPage={pageSize}
+              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+              rangeLabel={`${startRow}-${endRow} of ${totalSubjects}`}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              hasPrev={canGoPrev}
+              hasNext={canGoNext}
+              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+              onNext={() => setPage((value) => value + 1)}
+            />
           )}
         </>
       )}

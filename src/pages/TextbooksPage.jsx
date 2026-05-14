@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Loader2,
   MoreHorizontal,
@@ -13,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   createTextbook,
   deleteTextbook,
@@ -432,6 +431,7 @@ export default function TextbooksPage() {
     hasNext: false,
   });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -484,7 +484,7 @@ export default function TextbooksPage() {
 
         const response = await fetchTextbooks({
           page,
-          limit: PAGE_SIZE,
+          limit: pageSize,
           order: "desc",
           subjectId: selectedSubjectId || undefined,
           search: search.trim() || undefined,
@@ -497,7 +497,7 @@ export default function TextbooksPage() {
 
         if (!cancelled) {
           setTextbooks(list);
-          setPagination(extractPagination(response, list.length, PAGE_SIZE));
+          setPagination(extractPagination(response, list.length, pageSize));
         }
       } catch (err) {
         if (!cancelled) {
@@ -508,7 +508,7 @@ export default function TextbooksPage() {
               "Failed to load syllabus"
           );
           setTextbooks([]);
-          setPagination(extractPagination(null, 0, PAGE_SIZE));
+          setPagination(extractPagination(null, 0, pageSize));
         }
       } finally {
         if (!cancelled) {
@@ -521,7 +521,7 @@ export default function TextbooksPage() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [page, refreshKey, search, selectedSubjectId, subjects]);
+  }, [page, pageSize, refreshKey, search, selectedSubjectId, subjects]);
 
   const filteredTextbooks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -593,8 +593,8 @@ export default function TextbooksPage() {
     }
   }
 
-  const startRow = totalTextbooks === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const endRow = Math.min(page * PAGE_SIZE, totalTextbooks);
+  const startRow = totalTextbooks === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRow = Math.min(page * pageSize, totalTextbooks);
   const rowsToShow = search.trim() ? filteredTextbooks : textbooks;
 
   return (
@@ -748,42 +748,26 @@ export default function TextbooksPage() {
               </table>
             </div>
 
-            <div className="mt-6 flex flex-col gap-4 text-sm text-[#3a3c42] xl:flex-row xl:items-center xl:justify-between">
-              <span>
-                {startRow}-{endRow} of {totalTextbooks}
-              </span>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={!pagination.hasPrev}
-                    onClick={() => setPage((value) => Math.max(value - 1, 1))}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={17} />
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!pagination.hasNext}
-                    onClick={() =>
-                      setPage((value) =>
-                        Math.min(value + 1, pagination.totalPages || value + 1)
-                      )
-                    }
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
-
-                <span>
-                  Page {pagination.currentPage} of {pagination.totalPages}
-                </span>
-              </div>
-            </div>
+            <PaginationControls
+              className="mt-6"
+              rowsPerPage={pageSize}
+              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+              rangeLabel={`${startRow}-${endRow} of ${totalTextbooks}`}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              hasPrev={pagination.hasPrev}
+              hasNext={pagination.hasNext}
+              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+              onNext={() =>
+                setPage((value) =>
+                  Math.min(value + 1, pagination.totalPages || value + 1)
+                )
+              }
+            />
           </>
         )}
       </section>

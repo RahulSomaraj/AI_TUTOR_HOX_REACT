@@ -3,8 +3,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Loader2,
   MoreHorizontal,
@@ -16,6 +14,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   createTopic,
   deleteTopic,
@@ -893,6 +892,7 @@ export default function TopicsPage() {
     hasNext: false,
   });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -918,7 +918,7 @@ export default function TopicsPage() {
 
         const response = await fetchTopics({
           page,
-          limit: PAGE_SIZE,
+          limit: pageSize,
           chapterId,
         });
         const list = extractList(response, ["topics"]).map((topic, index) =>
@@ -927,7 +927,7 @@ export default function TopicsPage() {
 
         if (!cancelled) {
           setTopics(list);
-          setPagination(extractPagination(response, list.length, PAGE_SIZE));
+          setPagination(extractPagination(response, list.length, pageSize));
         }
       } catch (err) {
         if (!cancelled) {
@@ -938,7 +938,7 @@ export default function TopicsPage() {
               "Failed to load topics"
           );
           setTopics([]);
-          setPagination(extractPagination(null, 0, PAGE_SIZE));
+          setPagination(extractPagination(null, 0, pageSize));
         }
       } finally {
         if (!cancelled) {
@@ -951,7 +951,7 @@ export default function TopicsPage() {
     return () => {
       cancelled = true;
     };
-  }, [chapter, chapterId, page, refreshKey]);
+  }, [chapter, chapterId, page, pageSize, refreshKey]);
 
   const filteredTopics = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -977,8 +977,8 @@ export default function TopicsPage() {
       ? filteredTopics.length
       : (pagination?.totalCount ?? topics.length);
   const rowsToShow = search.trim() ? filteredTopics : topics;
-  const startRow = totalTopics === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const endRow = Math.min(page * PAGE_SIZE, totalTopics);
+  const startRow = totalTopics === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRow = Math.min(page * pageSize, totalTopics);
   const title = chapter?.title ?? chapter?.name ?? "Chapter";
   const code = chapter?.code ? ` - ${chapter.code}` : "";
 
@@ -1148,42 +1148,26 @@ export default function TopicsPage() {
               </table>
             </div>
 
-            <div className="mt-6 flex flex-col gap-4 ty-caption xl:flex-row xl:items-center xl:justify-between">
-              <span>
-                {startRow}-{endRow} of {totalTopics}
-              </span>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={!pagination.hasPrev}
-                    onClick={() => setPage((value) => Math.max(value - 1, 1))}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={17} />
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!pagination.hasNext}
-                    onClick={() =>
-                      setPage((value) =>
-                        Math.min(value + 1, pagination.totalPages || value + 1)
-                      )
-                    }
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
-
-                <span>
-                  Page {pagination.currentPage} of {pagination.totalPages}
-                </span>
-              </div>
-            </div>
+            <PaginationControls
+              className="mt-6"
+              rowsPerPage={pageSize}
+              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+              rangeLabel={`${startRow}-${endRow} of ${totalTopics}`}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              hasPrev={pagination.hasPrev}
+              hasNext={pagination.hasNext}
+              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+              onNext={() =>
+                setPage((value) =>
+                  Math.min(value + 1, pagination.totalPages || value + 1)
+                )
+              }
+            />
           </>
         )}
       </section>

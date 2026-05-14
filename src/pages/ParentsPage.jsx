@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search,Plus,MoreHorizontal, ChevronDown, ChevronLeft,ChevronRight,Pencil,Trash2,Loader2,X,Eye,EyeOff,} from "lucide-react";
+import { Search,Plus,MoreHorizontal, ChevronDown,Pencil,Trash2,Loader2,X,Eye,EyeOff,} from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   fetchParents,
   createParent,
@@ -653,13 +654,14 @@ function DeleteDialog({ parentName, onConfirm, onCancel, deleting }) {
 }
 
 // Main Page 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 10;
 
 export default function ParentsPage() {
   const [parents, setParents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
 
   const [search, setSearch] = useState("");
 
@@ -675,7 +677,7 @@ export default function ParentsPage() {
   const loadParents = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchParents({ page, limit: ITEMS_PER_PAGE });
+      const res = await fetchParents({ page, limit: itemsPerPage });
       const list = Array.isArray(res?.data) ? res.data : [];
       const pagination = res?.pagination || {};
 
@@ -689,7 +691,7 @@ export default function ParentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, itemsPerPage]);
 
   useEffect(() => {
     loadParents();
@@ -732,11 +734,6 @@ export default function ParentsPage() {
   const displayParents = parents.filter((p) =>
     (p.name || "").toLowerCase().includes(search.toLowerCase())
   );
-
-  const pageNumbers = [];
-  for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
-    pageNumbers.push(i);
-  }
 
   return (
     <div className="flex-1 flex flex-col bg-[#f5f7fa] min-h-screen">
@@ -885,73 +882,29 @@ export default function ParentsPage() {
           </div>
 
           {!loading && totalPages > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-              <p className="ty-caption">
-                Showing {(page - 1) * ITEMS_PER_PAGE + 1}–
-                {Math.min(page * ITEMS_PER_PAGE, totalCount)} of {totalCount} parents
-              </p>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft size={16} className="text-gray-600" />
-                </button>
-
-                {page > 3 && (
-                  <>
-                    <button
-                      onClick={() => setPage(1)}
-                      className="w-8 h-8 rounded-md text-xs text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      1
-                    </button>
-                    {page > 4 && <span className="text-gray-400 text-xs px-1">...</span>}
-                  </>
-                )}
-
-                {pageNumbers.map((pNum) => (
-                  <button
-                    key={pNum}
-                    onClick={() => setPage(pNum)}
-                    className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
-                      pNum === page
-                        ? "bg-[#23616E] text-white"
-                        : "hover:bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {pNum}
-                  </button>
-                ))}
-
-                {page < totalPages - 2 && (
-                  <>
-                    {page < totalPages - 3 && (
-                      <span className="text-gray-400 text-xs px-1">...</span>
-                    )}
-                    <button
-                      onClick={() => setPage(totalPages)}
-                      className="w-8 h-8 rounded-md text-xs text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight size={16} className="text-gray-600" />
-                </button>
-              </div>
-            </div>
+            <PaginationControls
+              className="border-t border-gray-100 px-6 py-4"
+              rowsPerPage={itemsPerPage}
+              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(nextItemsPerPage) => {
+                setItemsPerPage(nextItemsPerPage);
+                setPage(1);
+              }}
+              rangeLabel={`${(page - 1) * itemsPerPage + 1}-${Math.min(
+                page * itemsPerPage,
+                totalCount
+              )} of ${totalCount} parents`}
+              currentPage={page}
+              totalPages={totalPages}
+              hasPrev={page > 1}
+              hasNext={page < totalPages}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+            />
           )}
         </div>
       </div>
     </div>
   );
 }
+

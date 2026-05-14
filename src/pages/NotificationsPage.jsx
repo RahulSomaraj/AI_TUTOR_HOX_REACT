@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   ImagePlus,
   Loader2,
@@ -11,6 +9,7 @@ import {
   Send,
   X,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import { fetchNotifications, sendNotification, uploadFile } from "../api/authService";
 
 const CATEGORY_OPTIONS = [
@@ -655,63 +654,27 @@ export default function NotificationsPage() {
                 ))}
               </div>
 
-              <div className="mt-6 flex flex-col gap-4 text-sm text-[#3a3c42] xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <label className="flex items-center gap-3 rounded-[26px] bg-white/80 px-5 py-4 text-sm font-medium text-[#3a3c42] shadow-[0_10px_24px_rgba(33,73,85,0.06)]">
-                    Show
-                    <select
-                      value={pageSize}
-                      onChange={(event) => {
-                        setPageSize(Number(event.target.value));
-                        setPage(1);
-                      }}
-                      className="h-12 rounded-full border border-[#d5d9df] bg-[#f7f8fb] px-5 text-[15px] text-[#20242a] outline-none transition focus:border-[#23616E] focus:ring-2 focus:ring-[#23616E]/10"
-                    >
-                      {PAGE_SIZE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                    per page
-                  </label>
-
-                  <span>
-                    {startRow}-{endRow} of {totalNotifications}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      disabled={!pagination.hasPrev || loading}
-                      onClick={() => setPage((value) => Math.max(value - 1, 1))}
-                      className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <ChevronLeft size={17} />
-                      Prev
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!pagination.hasNext || loading}
-                      onClick={() =>
-                        setPage((value) =>
-                          Math.min(value + 1, pagination.totalPages || value + 1)
-                        )
-                      }
-                      className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c7cbd1] px-5 text-[15px] transition hover:border-[#155966] hover:text-[#155966] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Next
-                      <ChevronRight size={17} />
-                    </button>
-                  </div>
-
-                  <span>
-                    Page {pagination.currentPage} of {pagination.totalPages}
-                  </span>
-                </div>
-              </div>
+              <PaginationControls
+                className="mt-6"
+                rowsPerPage={pageSize}
+                rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+                onRowsPerPageChange={(nextPageSize) => {
+                  setPageSize(nextPageSize);
+                  setPage(1);
+                }}
+                rangeLabel={`${startRow}-${endRow} of ${totalNotifications}`}
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                hasPrev={pagination.hasPrev}
+                hasNext={pagination.hasNext}
+                disabled={loading}
+                onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+                onNext={() =>
+                  setPage((value) =>
+                    Math.min(value + 1, pagination.totalPages || value + 1)
+                  )
+                }
+              />
             </>
           )}
         </section>

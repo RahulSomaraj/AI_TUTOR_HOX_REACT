@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, MoreHorizontal, ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
+import { Search, MoreHorizontal, ChevronDown, Pencil, Trash2, Plus, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   fetchClasses, createClass, deleteClass, updateClass,
   fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards, 
@@ -664,39 +665,6 @@ function SchoolFilter({ value, onChange }) {
   );
 }
 
-// Rows Per Page Dropdown
-function RowsPerPageSelect({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
-  const options = [10, 20, 50];
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white hover:border-gray-400 transition-colors"
-      >
-        {value}
-        <ChevronDown size={13} className="text-gray-500" />
-      </button>
-      {open && (
-        <div className="absolute left-0 bottom-9 z-40 bg-white border border-gray-200 rounded-lg shadow-lg w-20 py-1 text-sm">
-          {options.map((o) => (
-            <button
-              key={o}
-              onClick={() => { onChange(o); setOpen(false); }}
-              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${value === o ? "text-[#23616E] font-medium" : "text-gray-700"}`}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // Main Page
 export default function ClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -907,36 +875,19 @@ export default function ClassesPage() {
         </div>
 
         {!loading && totalCount > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <div className="flex items-center gap-2 ty-caption">
-              <span>Rows per page</span>
-              <RowsPerPageSelect value={itemsPerPage} onChange={handleItemsPerPageChange} />
-              <span className="ml-2">
-                {rangeStart}-{rangeEnd} of {totalCount}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="flex items-center gap-1.5 border border-gray-300 text-gray-600 text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft size={15} />
-                Prev
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="flex items-center gap-1.5 border border-gray-300 text-gray-600 text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-                <ChevronRight size={15} />
-              </button>
-              <span className="ty-caption ml-1">
-                Page {page} of {totalPages}
-              </span>
-            </div>
-          </div>
+          <PaginationControls
+            className="border-t border-gray-100 px-6 py-4"
+            rowsPerPage={itemsPerPage}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={handleItemsPerPageChange}
+            rangeLabel={`${rangeStart}-${rangeEnd} of ${totalCount}`}
+            currentPage={page}
+            totalPages={totalPages}
+            hasPrev={page > 1}
+            hasNext={page < totalPages}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+          />
         )}
       </div>
     </div>

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Search, Plus, MoreHorizontal, ChevronDown,
-  ChevronLeft, ChevronRight, Pencil, Trash2,
+  Pencil, Trash2,
   Loader2, X, Eye, EyeOff,
 } from "lucide-react";
+import PaginationControls from "../components/PaginationControls";
 import {
   fetchAllStudents, createStudent, updateStudent,
   deleteStudent, fetchSchools, fetchClasses,
@@ -615,6 +616,7 @@ export default function StudentsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [search, setSearch] = useState("");
   const [filterSchoolId, setFilterSchoolId] = useState("");
   const [filterSchools, setFilterSchools] = useState([]);
@@ -647,7 +649,7 @@ export default function StudentsPage() {
   const loadStudents = useCallback(() => {
     setLoading(true);
 
-    const params = { page, limit: ITEMS_PER_PAGE };
+    const params = { page, limit: itemsPerPage };
     if (filterSchoolId) params.schoolId = Number(filterSchoolId);
 
     fetchAllStudents(params)
@@ -666,7 +668,7 @@ export default function StudentsPage() {
         setTotalPages(1);
       })
       .finally(() => setLoading(false));
-  }, [page, filterSchoolId]); 
+  }, [page, itemsPerPage, filterSchoolId]); 
 
   useEffect(() => {
     loadStudents();
@@ -699,11 +701,6 @@ export default function StudentsPage() {
   const filteredStudents = students.filter((s) =>
     (s.name || "").toLowerCase().includes(search.toLowerCase())
   );
-
-  const pageNumbers = [];
-  for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
-    pageNumbers.push(i);
-  }
 
   return (
     <div className="flex-1 flex flex-col bg-[#f5f7fa] min-h-screen">
@@ -847,69 +844,30 @@ export default function StudentsPage() {
             </table>
           </div>
 
-          {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-              <p className="ty-caption">
-                Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, totalCount)} of {totalCount} students
-              </p>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft size={16} className="text-gray-600" />
-                </button>
-
-                {page > 3 && (
-                  <>
-                    <button
-                      onClick={() => setPage(1)}
-                      className="w-8 h-8 rounded-md text-xs text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      1
-                    </button>
-                    {page > 4 && <span className="text-gray-400 text-xs px-1">...</span>}
-                  </>
-                )}
-
-                {pageNumbers.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
-                      p === page ? "bg-[#23616E] text-white" : "hover:bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-
-                {page < totalPages - 2 && (
-                  <>
-                    {page < totalPages - 3 && <span className="text-gray-400 text-xs px-1">...</span>}
-                    <button
-                      onClick={() => setPage(totalPages)}
-                      className="w-8 h-8 rounded-md text-xs text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight size={16} className="text-gray-600" />
-                </button>
-              </div>
-            </div>
+          {!loading && totalCount > 0 && (
+            <PaginationControls
+              className="border-t border-gray-100 px-6 py-4"
+              rowsPerPage={itemsPerPage}
+              rowsPerPageOptions={[10, 20, 50]}
+              onRowsPerPageChange={(nextItemsPerPage) => {
+                setItemsPerPage(nextItemsPerPage);
+                setPage(1);
+              }}
+              rangeLabel={`${(page - 1) * itemsPerPage + 1}-${Math.min(
+                page * itemsPerPage,
+                totalCount
+              )} of ${totalCount} students`}
+              currentPage={page}
+              totalPages={totalPages}
+              hasPrev={page > 1}
+              hasNext={page < totalPages}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+            />
           )}
         </div>
       </div>
     </div>
   );
 }
+
