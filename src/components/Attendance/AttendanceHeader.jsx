@@ -16,50 +16,50 @@ const AttendanceHeader = ({
 }) => {
   return (
     <div className="flex items-center justify-between mb-5">
-      <h1 className="text-2xl font-bold text-gray-800">Attendance</h1>
+      <h1 className="text-4xl font-bold text-gray-900">Attendance</h1>
 
       <div className="flex items-center gap-3">
         {/* Select Start Date button */}
         <button
           onClick={onOpenStartDate}
-          className="flex items-center gap-2 pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 bg-white hover:bg-gray-50 transition-colors min-w-[140px]"
+          className="flex items-center gap-2 px-6 py-3 border border-gray-400 rounded-xl text-base text-gray-600 bg-[#EEF5F9] hover:bg-gray-50 transition-colors min-w-[170px]"
         >
           <span className="flex-1 text-left">
             {startDate ? formatDisplay(startDate) : "Select Start ..."}
           </span>
-          <Calendar size={15} className="text-gray-400 flex-shrink-0" />
+          <Calendar size={18} className="text-gray-600 flex-shrink-0" />
         </button>
 
         {/* Select End Date button */}
         <button
           onClick={onOpenEndDate}
-          className="flex items-center gap-2 pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 bg-white hover:bg-gray-50 transition-colors min-w-[140px]"
+          className="flex items-center gap-2 px-6 py-3 border border-gray-400 rounded-xl text-base text-gray-600 bg-[#EEF5F9] hover:bg-gray-50 transition-colors min-w-[170px]"
         >
           <span className="flex-1 text-left">
             {endDate ? formatDisplay(endDate) : "Select End D..."}
           </span>
-          <Calendar size={15} className="text-gray-400 flex-shrink-0" />
+          <Calendar size={18} className="text-gray-600 flex-shrink-0" />
         </button>
 
         {/* Download Report */}
         <button
           onClick={onDownloadReport}
-          className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-6 py-3 border rounded-xl text-base font-semibold transition-colors hover:bg-gray-50"
           style={{ color: "#1a5f6a", borderColor: "#1a5f6a" }}
         >
-          <Download size={15} />
+          <Download size={18} />
           Download Report
         </button>
 
         {/* Add Attendance */}
         <button
           onClick={onAddAttendance}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white font-medium transition-colors"
+          className="flex items-center gap-2 px-6 py-3 rounded-xl text-base text-white font-semibold transition-colors"
           style={{ backgroundColor: "#1a5f6a" }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#164f59")}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = "#1a5f6a")}
         >
-          <Plus size={15} />
+          <Plus size={18} />
           Add Attendance
         </button>
       </div>

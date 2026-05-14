@@ -246,7 +246,7 @@ const Attendance = () => {
   const schoolOptions = schools.map((s) => ({ id: s.id, name: s.schoolName }));
   const gradeOptions  = grades.map((g)  => ({ id: g.id, name: g.aliasName ?? g.name }));
 
-  //  Handle both student and teacher name/id fields from API
+  // Handle both student and teacher name/id fields from API
   const tableStudents = attendance.map((r) => ({
     id:       r.id ?? r.studentId ?? r.teacherId,
     name:     r.studentName   ?? r.teacherName   ?? r.student?.name ?? r.teacher?.name ?? "—",
@@ -263,35 +263,44 @@ const Attendance = () => {
   ];
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen p-6">
+    <div className="flex-1 flex flex-col min-h-screen">
 
-      <AttendanceHeader
-        startDate={startDate}
-        endDate={endDate}
-        onOpenStartDate={() => setStartModalOpen(true)}
-        onOpenEndDate={() => setEndModalOpen(true)}
-        onDownloadReport={handleDownloadReport}
-        onAddAttendance={() => setAddModalOpen(true)}
-      />
+      {/* ── Page Header — no card, matches Classes & Banner pages ── */}
+      <div className="px-6 pt-3 pb-5">
+        <AttendanceHeader
+          startDate={startDate}
+          endDate={endDate}
+          onOpenStartDate={() => setStartModalOpen(true)}
+          onOpenEndDate={() => setEndModalOpen(true)}
+          onDownloadReport={handleDownloadReport}
+          onAddAttendance={() => setAddModalOpen(true)}
+        />
+      </div>
 
-      <AttendanceFilters
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedBoard={selectedGrade}
-        onBoardChange={setSelectedGrade}
-        boards={gradeOptions}
-        selectedSchool={selectedSchool}
-        onSchoolChange={(val) => { setSelectedSchool(val); setSelectedGrade(""); }}
-        schools={schoolOptions}
-        selectedType={selectedType}
-        onTypeChange={setSelectedType}
-        attendanceTypes={attendanceTypes}
-        loadingSchools={loadingSchools}
-        loadingGrades={loadingGrades}
-      />
+      {/* ── Filters Card — white card, matches Classes & Banner pages ── */}
+      <div className="mx-6 mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
+        <AttendanceFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedBoard={selectedGrade}
+          onBoardChange={setSelectedGrade}
+          boards={gradeOptions}
+          selectedSchool={selectedSchool}
+          onSchoolChange={(val) => { setSelectedSchool(val); setSelectedGrade(""); }}
+          schools={schoolOptions}
+          selectedType={selectedType}
+          onTypeChange={setSelectedType}
+          attendanceTypes={attendanceTypes}
+          loadingSchools={loadingSchools}
+          loadingGrades={loadingGrades}
+        />
+      </div>
 
-      <div className="flex gap-5">
-        <div className="flex-1 min-w-0">
+      {/* ── Main Content Row ── */}
+      <div className="flex gap-5 mx-6 mb-6">
+
+        {/* ── Attendance Table Card ── */}
+        <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-200 overflow-hidden">
           <AttendanceTable
             students={tableStudents}
             selectedDate={selectedDate}
@@ -299,12 +308,13 @@ const Attendance = () => {
             type={selectedType}
           />
         </div>
+
+        {/* ── Right Sidebar (calendar & stats unchanged) ── */}
         <div className="w-64 flex-shrink-0">
           <AttendanceCalendar
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
           />
-          {/* : Show stats when school + (grade for student | teacher type) is selected */}
           <AttendanceStats
             stats={
               selectedSchool && (selectedType === "teacher" || selectedGrade)
@@ -316,6 +326,7 @@ const Attendance = () => {
         </div>
       </div>
 
+      {/* ── Modals (unchanged) ── */}
       <DatePickerModal
         isOpen={startModalOpen}
         onClose={() => setStartModalOpen(false)}
@@ -345,6 +356,7 @@ const Attendance = () => {
         onSubmit={handleAddSubmit}
       />
 
+      {/* ── Toast ── */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-800 text-white text-sm px-5 py-2.5 rounded-xl shadow-lg">
           {toast}

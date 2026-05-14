@@ -27,7 +27,7 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loa
   };
 
   return (
-    <div className="relative min-w-[170px]" ref={ref}>
+    <div className="relative w-full" ref={ref}>
       {/* Trigger button */}
       <button
         type="button"
@@ -35,7 +35,7 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loa
         className={`w-full flex items-center justify-between pl-3 pr-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors
           ${disabled || loading ? "opacity-50 cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-600 hover:bg-gray-50"}`}
       >
-        <span className={selectedLabel ? "text-gray-700" : "text-gray-400"}>
+        <span className={selectedLabel ? "text-gray-700" : "text-gray-600"}>
           {loading ? "Loading..." : selectedLabel || placeholder}
         </span>
         <ChevronDown size={14} className={`text-gray-400 transition-transform flex-shrink-0 ml-1 ${open ? "rotate-180" : ""}`} />
@@ -109,46 +109,51 @@ const AttendanceFilters = ({
   loadingGrades,
 }) => {
   return (
-    <div className="flex items-center gap-3 mb-5">
+    <div className="flex items-center gap-3">
 
       {/* Search */}
-      <div className="relative flex-1 max-w-xs">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="relative flex-[2]">
+        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 shrink-0" />
         <input
           type="text"
           placeholder="Search attendance by name..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm text-gray-600 placeholder-gray-500 bg-[#F5F6FA] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
         />
       </div>
 
-      {/* Select school — searchable, always active */}
-      <SearchableSelect
-        value={selectedSchool}
-        onChange={(val) => { onSchoolChange(val); onBoardChange(""); }}
-        options={schools}
-        placeholder="Select school"
-        loading={loadingSchools}
-      />
+      {/* Select school */}
+      <div className="flex-1">
+        <SearchableSelect
+          value={selectedSchool}
+          onChange={(val) => { onSchoolChange(val); onBoardChange(""); }}
+          options={schools}
+          placeholder="Select school"
+          loading={loadingSchools}
+        />
+      </div>
 
-      <SearchableSelect
-  value={selectedBoard}
-  onChange={onBoardChange}
-  options={boards}
-  placeholder={
-    selectedType === "teacher"
-      ? "Not required for teacher"
-      : selectedSchool
-      ? "Select grade"
-      : "Select school first"
-  }
-  disabled={!selectedSchool || selectedType === "teacher"}
-  loading={loadingGrades}
-/>
+      {/* Select grade */}
+      <div className="flex-1">
+        <SearchableSelect
+          value={selectedBoard}
+          onChange={onBoardChange}
+          options={boards}
+          placeholder={
+            selectedType === "teacher"
+              ? "Not required for teacher"
+              : selectedSchool
+              ? "Select grade"
+              : "Select school first"
+          }
+          disabled={!selectedSchool || selectedType === "teacher"}
+          loading={loadingGrades}
+        />
+      </div>
 
-      {/* Select Attendance Type — regular select */}
-      <div className="relative min-w-[180px]">
+      {/* Select Attendance Type */}
+      <div className="relative flex-1">
         <select
           value={selectedType}
           onChange={(e) => onTypeChange(e.target.value)}
