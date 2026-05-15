@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, X,} from "lucide-react";
+import { AlertTriangle, ChevronDown, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, X, Eye, EyeOff,} from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import CountryCodePicker from "../components/CountryCodePicker";
 import { fetchAdminUsers, fetchSchools, createTeacher, updateTeacher, deleteTeacher } from "../api/authService";
 
 function extractTeachers(response) {
@@ -157,12 +158,15 @@ function ActionMenu({ teacherName, onEdit, onDelete }) {
 
 function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
   const isEdit = Boolean(initialData);
+  // ── CHANGE 1: added password & confirmPassword to form state ──
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     contactNumber: initialData?.contactNumber ?? "",
     countryCode: initialData?.countryCode ?? "+91",
     email: initialData?.email ?? "",
     schoolId: initialData?.schoolId ?? "",
+    password: "",
+    confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -170,6 +174,8 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
   //  Searchable school dropdown state
   const [schoolOpen, setSchoolOpen] = useState(false);
   const [schoolQuery, setSchoolQuery] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const schoolRef = useRef(null);
 
   useEffect(() => {
@@ -209,10 +215,18 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
     if (!emailPattern.test(form.email.trim())) return setError("Please enter a valid email address.");
     if (!form.schoolId) return setError("Please select a school.");
 
+    // ── CHANGE 2: password validation for Add mode only ──
+    if (!isEdit) {
+      if (!form.password.trim()) return setError("Password is required.");
+      if (form.password.length < 6) return setError("Password must be at least 6 characters.");
+      if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
+    }
+
     setSaving(true);
     setError("");
 
     try {
+      // ── CHANGE 3: pass password in payload for Add mode only ──
       await onSubmit({
         id: initialData?.id,
         name: form.name.trim(),
@@ -220,6 +234,7 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
         contactNumber: form.contactNumber.trim(),
         countryCode: form.countryCode.trim() || "+91",
         schoolId: form.schoolId,
+        ...(!isEdit && { password: form.password }),
       });
       onClose();
     } catch (err) {
@@ -272,40 +287,29 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
             />
           </div>
 
-          {/* Contact Number  */}
-          <div>
-            <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Contact Number</label>
-            <div className="flex overflow-hidden rounded-[10px] border border-[#c7cbd1]">
-              <input
-                type="text"
-                value={form.countryCode}
-                onChange={setValue("countryCode")}
-                disabled={saving}
-                className="h-[48px] w-[72px] border-r border-[#d6dbe1] px-3 text-[14px] text-[#20242a] outline-none disabled:bg-[#f8fafb]"
-              />
-              <input
-                type="text"
-                value={form.contactNumber}
-                onChange={setValue("contactNumber")}
-                disabled={saving}
-                placeholder="9876543222"
-                className="h-[48px] flex-1 px-4 text-[14px] text-[#20242a] outline-none placeholder:text-[#6b7280] disabled:bg-[#f8fafb]"
-              />
-            </div>
-          </div>
+         
+          {/* Contact Number */}
+    <div>
+        <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Contact Number</label>
+        <div className="flex rounded-[10px] border border-[#c7cbd1]">
+        <div className="border-r border-[#d6dbe1]">
+         <CountryCodePicker
+           value={form.countryCode}
+           onChange={(dial) => setForm((f) => ({ ...f, countryCode: dial }))}
+           disabled={saving}
+         />
+       </div>
 
-          {/* Email  */}
-          <div>
-            <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Email</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={setValue("email")}
-              disabled={saving}
-              placeholder="teacher@school.com"
-              className="h-[48px] w-full rounded-[10px] border border-[#c7cbd1] px-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#6b7280] focus:border-[#155966] disabled:bg-[#f8fafb]"
-            />
-          </div>
+        <input
+             type="text"
+             value={form.contactNumber}
+             onChange={setValue("contactNumber")}
+             disabled={saving}
+             placeholder="9876543222"
+             className="h-[48px] flex-1 px-4 text-[14px] text-[#20242a] outline-none placeholder:text-[#6b7280] disabled:bg-[#f8fafb]"
+        />
+      </div>
+  </div>
 
           {/*  School searchable dropdown */}
           <div>
@@ -368,6 +372,67 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
               )}
             </div>
           </div>
+
+          {/* Email  */}
+          <div>
+            <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={setValue("email")}
+              disabled={saving}
+              placeholder="teacher@school.com"
+              className="h-[48px] w-full rounded-[10px] border border-[#c7cbd1] px-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#6b7280] focus:border-[#155966] disabled:bg-[#f8fafb]"
+            />
+          </div>
+
+          {/* ── Password & Confirm Password  ── */}
+          {!isEdit && (
+            <>
+              <div>
+                <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={setValue("password")}
+                    disabled={saving}
+                    placeholder="Min. 6 characters"
+                    className="h-[48px] w-full rounded-[10px] border border-[#c7cbd1] px-4 pr-11 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#6b7280] focus:border-[#155966] disabled:bg-[#f8fafb]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    disabled={saving}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#20242a] transition-colors disabled:opacity-50"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={form.confirmPassword}
+                    onChange={setValue("confirmPassword")}
+                    disabled={saving}
+                    placeholder="Re-enter password"
+                    className="h-[48px] w-full rounded-[10px] border border-[#c7cbd1] px-4 pr-11 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#6b7280] focus:border-[#155966] disabled:bg-[#f8fafb]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    disabled={saving}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#20242a] transition-colors disabled:opacity-50"
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -569,6 +634,7 @@ export default function TeachersPage() {
     setActiveTeacher(null);
   }
 
+  // ── CHANGE 5: pass password to createTeacher payload ──
   async function handleCreateTeacher(payload) {
     await createTeacher({
       name: payload.name,
@@ -577,6 +643,7 @@ export default function TeachersPage() {
       countryCode: payload.countryCode,
       schoolId: Number(payload.schoolId),
       userType: "TEACHER",
+      password: payload.password,
     });
     setPage(1);
     setRefreshKey((k) => k + 1);
@@ -615,25 +682,16 @@ export default function TeachersPage() {
   const endRow = Math.min(page * limit, totalTeachers);
 
   return (
-    <div className="min-h-screen bg-[#eef6f9] px-4 py-7 sm:px-6 lg:px-8">
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
-            Teachers
-          </h1>
-          <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
-            {totalTeachers} Teachers
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
-        >
-          <Plus size={22} strokeWidth={2.2} />
-          Add Teacher
-        </button>
+    <div className="min-h-screen bg-[#eef6f9]">
+      <div className="flex items-center justify-between px-6 pt-3 pb-5">
+         <h1 className="text-4xl font-bold text-gray-900">Teachers</h1>
+         <button
+             type="button"
+             onClick={openAddModal}
+             className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
+          >
+           <Plus size={18} />Add Teacher
+          </button>
       </div>
 
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">

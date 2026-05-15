@@ -783,7 +783,7 @@ export default function ClassesPage() {
       )}
 
       <div className="flex items-center justify-between px-6 pt-3 pb-5">
-        <h1 className="ty-page-title">Classes</h1>
+        <h1 className="text-4xl font-bold text-gray-900">Classes</h1>
         <button
           onClick={() => setShowAddModal(true)}
           className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-6 py-3 rounded-xl transition-colors"
