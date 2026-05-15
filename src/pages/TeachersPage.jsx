@@ -1,8 +1,300 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, X, Eye, EyeOff,} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  AlertTriangle, ChevronDown, Loader2, MoreHorizontal, Pencil,
+  Plus, Search, Trash2, X, Eye, EyeOff,
+} from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/CountryCodePicker";
-import { fetchAdminUsers, fetchSchools, createTeacher, updateTeacher, deleteTeacher } from "../api/authService";
+import {
+  fetchAdminUsers, fetchSchools, createTeacher, updateTeacher, deleteTeacher,
+} from "../api/authService";
+
+
+
+function useOutsideClick(ref, cb) {
+  useEffect(() => {
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) cb();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [cb, ref]);
+}
+
+function useDebounce(value, delay = 400) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+const DROPDOWN_LIMIT = 10;
+
+async function fetchAllPages(fetcher, query = "") {
+  let page = 1;
+  let all = [];
+  while (true) {
+    const list = await fetcher(query, page);
+    all = [...all, ...list];
+    if (list.length < DROPDOWN_LIMIT) break;
+    page++;
+  }
+  return all;
+}
+
+//  School Search Hook 
+function useSchoolSearch() {
+  const [schools, setSchools] = useState([]);
+  const [loadingSchools, setLoadingSchools] = useState(false);
+
+  const searchSchools = useCallback((query = "") => {
+    setLoadingSchools(true);
+    fetchAllPages(
+      (q, page) =>
+        fetchSchools({ page, limit: DROPDOWN_LIMIT, schoolName: q }).then((res) => {
+          const raw = res?.data?.schools || res?.data?.data || res?.data || res || [];
+          return Array.isArray(raw) ? raw : [];
+        }),
+      query
+    )
+      .then((list) =>
+        setSchools(
+          list.map((s) => ({
+            value: String(s.id ?? s._id ?? ""),
+            label: s.schoolName || s.name || "School",
+          }))
+        )
+      )
+      .catch(() => setSchools([]))
+      .finally(() => setLoadingSchools(false));
+  }, []);
+
+  return { schools, loadingSchools, searchSchools };
+}
+
+//  School Filter Hook 
+function useFilterSchoolSearch() {
+  const [schools, setSchools] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback((query = "") => {
+    setLoading(true);
+    fetchAllPages(
+      (q, page) =>
+        fetchSchools({ page, limit: DROPDOWN_LIMIT, schoolName: q }).then((res) => {
+          const raw = res?.data?.schools || res?.data?.data || res?.data || res || [];
+          return Array.isArray(raw) ? raw : [];
+        }),
+      query
+    )
+      .then((list) =>
+        setSchools(
+          list.map((s) => ({
+            value: String(s.id ?? s._id ?? ""),
+            label: s.schoolName || s.name || "School",
+          }))
+        )
+      )
+      .catch(() => setSchools([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { schools, loading, search };
+}
+
+//  SearchableSelect 
+function SearchableSelect({
+  value,
+  onChange,
+  onSearch,
+  options = [],
+  placeholder = "Select...",
+  searchPlaceholder = "Search...",
+  disabled = false,
+  loading = false,
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    if (open) onSearch?.(debouncedQuery);
+  }, [debouncedQuery, open]);
+
+  const handleOpen = () => {
+    if (disabled) return;
+    setOpen(true);
+    setQuery("");
+    onSearch?.("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleSelect = (opt) => {
+    onChange(opt);
+    setOpen(false);
+    setQuery("");
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled || loading}
+        onClick={handleOpen}
+        className={`h-[48px] w-full flex items-center justify-between rounded-[10px] border bg-white px-4 text-[14px] outline-none transition
+          ${disabled || loading ? "bg-[#f8fafb] text-[#6b7280] cursor-not-allowed border-[#c7cbd1]" : "text-[#20242a] border-[#c7cbd1] cursor-pointer"}
+          ${open ? "border-[#155966] ring-2 ring-[#155966]/15" : ""}`}
+      >
+        <span className={value?.label ? "text-[#20242a]" : "text-[#6b7280]"}>
+          {loading ? "Loading..." : value?.label || placeholder}
+        </span>
+        {loading
+          ? <Loader2 size={14} className="animate-spin text-[#6b7280] flex-shrink-0" />
+          : <ChevronDown size={16} className={`text-[#5b626a] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+        }
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="max-h-48 overflow-y-auto py-1">
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#155966]" />
+              </div>
+            ) : options.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No results found</p>
+            ) : (
+              options.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleSelect(opt)}
+                  className={`w-full text-left px-4 py-2.5 text-[14px] hover:bg-[#f5fafc] transition-colors
+                    ${value?.value === opt.value ? "text-[#155966] font-medium" : "text-[#20242a]"}`}
+                >
+                  {opt.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+//  School Filter Dropdown 
+function SchoolFilter({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  const { schools, loading, search } = useFilterSchoolSearch();
+  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    if (open) search(debouncedQuery);
+  }, [debouncedQuery, open]);
+
+  const allOption = { value: "", label: "All Schools" };
+  const options = [allOption, ...schools];
+  const selectedLabel = value
+    ? (schools.find((s) => s.value === value)?.label || "School selected")
+    : "All Schools";
+
+  const handleOpen = () => {
+    setOpen((v) => !v);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  return (
+    <div className="relative w-full lg:w-[200px]" ref={ref}>
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="h-[40px] w-full flex items-center justify-between rounded-[12px] border border-[#c7cbd1] bg-white px-4 text-[14px] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
+      >
+        <span className={value ? "text-[#20242a]" : "text-[#5b626a]"}>
+          {loading && schools.length === 0 ? "Loading..." : selectedLabel}
+        </span>
+        {loading && schools.length === 0
+          ? <Loader2 size={13} className="animate-spin text-[#6b7280] flex-shrink-0" />
+          : <ChevronDown size={16} className="text-[#5b626a] flex-shrink-0" strokeWidth={2} />
+        }
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search school..."
+                className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <ul className="max-h-48 overflow-y-auto py-1">
+            {loading ? (
+              <li className="flex justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#155966]" />
+              </li>
+            ) : options.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-gray-400 text-center">No schools found</li>
+            ) : (
+              options.map((s) => (
+                <li
+                  key={s.value}
+                  onClick={() => { onChange(s.value); setOpen(false); setQuery(""); }}
+                  className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors
+                    ${value === s.value ? "text-[#155966] font-medium" : "text-[#20242a]"}`}
+                >
+                  {s.label}
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function extractTeachers(response) {
   if (Array.isArray(response)) return response;
@@ -11,15 +303,6 @@ function extractTeachers(response) {
   if (Array.isArray(response?.admins)) return response.admins;
   if (Array.isArray(response?.data?.users)) return response.data.users;
   if (Array.isArray(response?.data?.admins)) return response.data.admins;
-  if (Array.isArray(response?.data?.data)) return response.data.data;
-  return [];
-}
-
-function extractSchools(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.schools)) return response.schools;
-  if (Array.isArray(response?.data?.schools)) return response.data.schools;
   if (Array.isArray(response?.data?.data)) return response.data.data;
   return [];
 }
@@ -107,6 +390,7 @@ function mapTeacherRow(teacher) {
   };
 }
 
+//  ActionMenu 
 function ActionMenu({ teacherName, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -156,9 +440,10 @@ function ActionMenu({ teacherName, onEdit, onDelete }) {
   );
 }
 
-function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
+//  TeacherModal 
+function TeacherModal({ initialData = null, onClose, onSubmit }) {
   const isEdit = Boolean(initialData);
-  // ── CHANGE 1: added password & confirmPassword to form state ──
+
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     contactNumber: initialData?.contactNumber ?? "",
@@ -168,31 +453,24 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
     password: "",
     confirmPassword: "",
   });
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  //  Searchable school dropdown state
-  const [schoolOpen, setSchoolOpen] = useState(false);
-  const [schoolQuery, setSchoolQuery] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const schoolRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (schoolRef.current && !schoolRef.current.contains(event.target)) {
-        setSchoolOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const filteredSchools = schools.filter((s) =>
-    (s.name || "").toLowerCase().includes(schoolQuery.toLowerCase())
+  // API-based school selection
+  const { schools, loadingSchools, searchSchools } = useSchoolSearch();
+  const [selectedSchool, setSelectedSchool] = useState(
+    initialData?.schoolId
+      ? { value: String(initialData.schoolId), label: initialData.school ?? "" }
+      : null
   );
 
-  const selectedSchoolName = schools.find((s) => String(s.id) === String(form.schoolId))?.name || "";
+  const handleSchoolChange = (opt) => {
+    setSelectedSchool(opt);
+    setForm((f) => ({ ...f, schoolId: opt ? String(opt.value) : "" }));
+  };
+
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     function handleEscape(event) {
@@ -215,7 +493,6 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
     if (!emailPattern.test(form.email.trim())) return setError("Please enter a valid email address.");
     if (!form.schoolId) return setError("Please select a school.");
 
-    // ── CHANGE 2: password validation for Add mode only ──
     if (!isEdit) {
       if (!form.password.trim()) return setError("Password is required.");
       if (form.password.length < 6) return setError("Password must be at least 6 characters.");
@@ -226,7 +503,6 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
     setError("");
 
     try {
-      // ── CHANGE 3: pass password in payload for Add mode only ──
       await onSubmit({
         id: initialData?.id,
         name: form.name.trim(),
@@ -274,7 +550,7 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
         )}
 
         <div className="space-y-4">
-          {/* Name  */}
+          {/* Name */}
           <div>
             <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Name</label>
             <input
@@ -287,93 +563,44 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
             />
           </div>
 
-         
           {/* Contact Number */}
-    <div>
-        <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Contact Number</label>
-        <div className="flex rounded-[10px] border border-[#c7cbd1]">
-        <div className="border-r border-[#d6dbe1]">
-         <CountryCodePicker
-           value={form.countryCode}
-           onChange={(dial) => setForm((f) => ({ ...f, countryCode: dial }))}
-           disabled={saving}
-         />
-       </div>
-
-        <input
-             type="text"
-             value={form.contactNumber}
-             onChange={setValue("contactNumber")}
-             disabled={saving}
-             placeholder="9876543222"
-             className="h-[48px] flex-1 px-4 text-[14px] text-[#20242a] outline-none placeholder:text-[#6b7280] disabled:bg-[#f8fafb]"
-        />
-      </div>
-  </div>
-
-          {/*  School searchable dropdown */}
           <div>
-            <label className="mb-2 block text-[14px] font-medium text-[#20242a]">School</label>
-            <div className="relative" ref={schoolRef}>
-              <button
-                type="button"
-                onClick={() => { if (!saving) setSchoolOpen((v) => !v); }}
+            <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Contact Number</label>
+            <div className="flex rounded-[10px] border border-[#c7cbd1]">
+              <div className="border-r border-[#d6dbe1]">
+                <CountryCodePicker
+                  value={form.countryCode}
+                  onChange={(dial) => setForm((f) => ({ ...f, countryCode: dial }))}
+                  disabled={saving}
+                />
+              </div>
+              <input
+                type="text"
+                value={form.contactNumber}
+                onChange={setValue("contactNumber")}
                 disabled={saving}
-                className="h-[48px] w-full flex items-center justify-between rounded-[10px] border border-[#c7cbd1] bg-white px-4 text-[14px] outline-none transition focus:border-[#155966] disabled:bg-[#f8fafb] disabled:opacity-50"
-              >
-                <span className={selectedSchoolName ? "text-[#20242a]" : "text-[#6b7280]"}>
-                  {selectedSchoolName || (schools.length > 0 ? "Select School" : "No schools available")}
-                </span>
-                <ChevronDown size={16} className="text-[#5b626a] flex-shrink-0" />
-              </button>
-
-              {schoolOpen && (
-                <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
-                  {/* Search input */}
-                  <div className="p-2 border-b border-gray-100">
-                    <div className="relative">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        autoFocus
-                        type="text"
-                        value={schoolQuery}
-                        onChange={(e) => setSchoolQuery(e.target.value)}
-                        placeholder="Search school..."
-                        className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Options */}
-                  <ul className="max-h-48 overflow-y-auto py-1">
-                    {filteredSchools.length === 0 ? (
-                      <li className="px-4 py-3 text-sm text-gray-400 text-center">No results</li>
-                    ) : (
-                      filteredSchools.map((school) => (
-                        <li
-                          key={school.id}
-                          onClick={() => {
-                            setForm((f) => ({ ...f, schoolId: school.id }));
-                            setSchoolOpen(false);
-                            setSchoolQuery("");
-                          }}
-                          className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors ${
-                            String(form.schoolId) === String(school.id)
-                              ? "text-[#155966] font-medium"
-                              : "text-[#20242a]"
-                          }`}
-                        >
-                          {school.name}
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-              )}
+                placeholder="9876543222"
+                className="h-[48px] flex-1 px-4 text-[14px] text-[#20242a] outline-none placeholder:text-[#6b7280] disabled:bg-[#f8fafb]"
+              />
             </div>
           </div>
 
-          {/* Email  */}
+          {/* School — API-based searchable dropdown */}
+          <div>
+            <label className="mb-2 block text-[14px] font-medium text-[#20242a]">School</label>
+            <SearchableSelect
+              value={selectedSchool}
+              onChange={handleSchoolChange}
+              onSearch={searchSchools}
+              options={schools}
+              placeholder="Select School"
+              searchPlaceholder="Search school..."
+              disabled={saving}
+              loading={loadingSchools}
+            />
+          </div>
+
+          {/* Email */}
           <div>
             <label className="mb-2 block text-[14px] font-medium text-[#20242a]">Email</label>
             <input
@@ -386,7 +613,7 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
             />
           </div>
 
-          {/* ── Password & Confirm Password  ── */}
+          {/* Password & Confirm Password (Add modal only) */}
           {!isEdit && (
             <>
               <div>
@@ -459,7 +686,7 @@ function TeacherModal({ initialData = null, schools = [], onClose, onSubmit }) {
   );
 }
 
-// DeleteTeacherModal 
+//  DeleteTeacherModal
 function DeleteTeacherModal({ teacherName, deleting, onCancel, onConfirm }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -496,10 +723,9 @@ function DeleteTeacherModal({ teacherName, deleting, onCancel, onConfirm }) {
   );
 }
 
-// TeachersPage 
+// ── TeachersPage  
 export default function TeachersPage() {
   const [teachers, setTeachers] = useState([]);
-  const [schools, setSchools] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -519,19 +745,6 @@ export default function TeachersPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [filterSchoolOpen, setFilterSchoolOpen] = useState(false);
-  const [filterSchoolQuery, setFilterSchoolQuery] = useState("");
-  const filterSchoolRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (filterSchoolRef.current && !filterSchoolRef.current.contains(event.target)) {
-        setFilterSchoolOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const queryParams = useMemo(
     () => ({
@@ -545,30 +758,7 @@ export default function TeachersPage() {
     [limit, page, schoolId, search, refreshKey]
   );
 
-  // Load schools for filter + modal
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSchoolOptions() {
-      try {
-        const response = await fetchSchools({ page: 1, limit: 50 });
-        const schoolOptions = extractSchools(response).map((school) => ({
-          id: String(school?.id ?? school?._id ?? ""),
-          name: school?.schoolName ?? school?.name ?? "School",
-        }));
-        if (!cancelled) {
-          setSchools(schoolOptions.filter((school) => school.id));
-        }
-      } catch (err) {
-        console.error("Failed to load schools for teacher filter:", err);
-      }
-    }
-
-    loadSchoolOptions();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Load teachers 
+  // Load teachers
   useEffect(() => {
     let cancelled = false;
 
@@ -634,7 +824,6 @@ export default function TeachersPage() {
     setActiveTeacher(null);
   }
 
-  // ── CHANGE 5: pass password to createTeacher payload ──
   async function handleCreateTeacher(payload) {
     await createTeacher({
       name: payload.name,
@@ -684,14 +873,14 @@ export default function TeachersPage() {
   return (
     <div className="min-h-screen bg-[#eef6f9]">
       <div className="flex items-center justify-between px-6 pt-3 pb-5">
-         <h1 className="text-4xl font-bold text-gray-900">Teachers</h1>
-         <button
-             type="button"
-             onClick={openAddModal}
-             className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
-          >
-           <Plus size={18} />Add Teacher
-          </button>
+        <h1 className="text-4xl font-bold text-gray-900">Teachers</h1>
+        <button
+          type="button"
+          onClick={openAddModal}
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
+        >
+          <Plus size={18} />Add Teacher
+        </button>
       </div>
 
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
@@ -713,79 +902,14 @@ export default function TeachersPage() {
           />
         </label>
 
-        {/* searchable school filter dropdown */}
-        <div className="relative w-full lg:w-[200px]" ref={filterSchoolRef}>
-          <button
-            type="button"
-            onClick={() => setFilterSchoolOpen((v) => !v)}
-            className="h-[40px] w-full flex items-center justify-between rounded-[12px] border border-[#c7cbd1] bg-white px-4 text-[14px] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          >
-            <span className={schoolId ? "text-[#20242a]" : "text-[#5b626a]"}>
-              {schoolId
-                ? schools.find((s) => String(s.id) === String(schoolId))?.name ?? "All Schools"
-                : "All Schools"}
-            </span>
-            <ChevronDown size={16} className="text-[#5b626a] flex-shrink-0" strokeWidth={2} />
-          </button>
-
-          {filterSchoolOpen && (
-            <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
-              <div className="p-2 border-b border-gray-100">
-                <div className="relative">
-                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    autoFocus
-                    type="text"
-                    value={filterSchoolQuery}
-                    onChange={(e) => setFilterSchoolQuery(e.target.value)}
-                    placeholder="Search school..."
-                    className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
-                  />
-                </div>
-              </div>
-              <ul className="max-h-48 overflow-y-auto py-1">
-                <li
-                  onClick={() => {
-                    setSchoolId("");
-                    setPage(1);
-                    setFilterSchoolOpen(false);
-                    setFilterSchoolQuery("");
-                  }}
-                  className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors ${
-                    !schoolId ? "text-[#155966] font-medium" : "text-[#20242a]"
-                  }`}
-                >
-                  All Schools
-                </li>
-                {schools
-                  .filter((s) => (s.name || "").toLowerCase().includes(filterSchoolQuery.toLowerCase()))
-                  .map((school) => (
-                    <li
-                      key={school.id}
-                      onClick={() => {
-                        setSchoolId(school.id);
-                        setPage(1);
-                        setFilterSchoolOpen(false);
-                        setFilterSchoolQuery("");
-                      }}
-                      className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors ${
-                        String(schoolId) === String(school.id)
-                          ? "text-[#155966] font-medium"
-                          : "text-[#20242a]"
-                      }`}
-                    >
-                      {school.name}
-                    </li>
-                  ))}
-                {schools.filter((s) =>
-                  (s.name || "").toLowerCase().includes(filterSchoolQuery.toLowerCase())
-                ).length === 0 && (
-                  <li className="px-4 py-3 text-sm text-gray-400 text-center">No results</li>
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
+        {/* API-based school filter dropdown */}
+        <SchoolFilter
+          value={schoolId}
+          onChange={(id) => {
+            setSchoolId(id);
+            setPage(1);
+          }}
+        />
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
@@ -872,7 +996,6 @@ export default function TeachersPage() {
 
       {modalMode === "add" && (
         <TeacherModal
-          schools={schools}
           onClose={closeModal}
           onSubmit={handleCreateTeacher}
         />
@@ -881,7 +1004,6 @@ export default function TeachersPage() {
       {modalMode === "edit" && activeTeacher && (
         <TeacherModal
           initialData={activeTeacher}
-          schools={schools}
           onClose={closeModal}
           onSubmit={handleUpdateTeacher}
         />
