@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search,Plus,MoreHorizontal, ChevronDown,Pencil,Trash2,Loader2,X,Eye,EyeOff,} from "lucide-react";
+import { Search, Plus, MoreHorizontal, ChevronDown, Pencil, Trash2, Loader2, X, Eye, EyeOff } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import CountryCodePicker from "../components/CountryCodePicker";
 import {
   fetchParents,
   createParent,
@@ -68,7 +69,6 @@ function ActionMenu({ onEdit, onDelete }) {
   );
 }
 
-//  StudentMultiSelect with search input added
 function StudentMultiSelect({
   label,
   value,
@@ -128,7 +128,6 @@ function StudentMultiSelect({
 
       {open && !loading && !disabled && (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1">
-          {/* Search input */}
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -143,7 +142,6 @@ function StudentMultiSelect({
             </div>
           </div>
 
-          {/* Options list */}
           <div className="max-h-52 overflow-y-auto py-1">
             {filteredOptions.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-400 text-center">
@@ -224,11 +222,7 @@ function ParentModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const [ccOpen, setCcOpen] = useState(false);
-  const ccRef = useRef(null);
-  useOutsideClick(ccRef, () => setCcOpen(false));
-
-  //  Searchable school dropdown state
+  // School searchable dropdown
   const [schoolOpen, setSchoolOpen] = useState(false);
   const [schoolQuery, setSchoolQuery] = useState("");
   const schoolRef = useRef(null);
@@ -237,8 +231,6 @@ function ParentModal({
   const filteredSchools = schools.filter((s) =>
     (s.name || "").toLowerCase().includes(schoolQuery.toLowerCase())
   );
-
-  const countryCodes = ["+91", "+1", "+44", "+61", "+971", "+65"];
 
   useEffect(() => {
     if (!form.schoolId) {
@@ -402,46 +394,22 @@ function ParentModal({
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Contact Number
             </label>
-            <div className="flex gap-0 border border-gray-300 rounded-lg overflow-hidden focus-within:border-[#23616E] focus-within:ring-1 focus-within:ring-[#23616E]/20 transition-colors">
-              <div className="relative" ref={ccRef}>
-                <button
-                  type="button"
-                  onClick={() => setCcOpen((v) => !v)}
-                  className="flex items-center gap-1 px-3 py-2.5 text-sm text-gray-700 border-r border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors h-full"
-                >
-                  {form.countryCode}
-                  <ChevronDown size={12} className="text-gray-400" />
-                </button>
-
-                {ccOpen && (
-                  <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-24 py-1">
-                    {countryCodes.map((cc) => (
-                      <button
-                        key={cc}
-                        type="button"
-                        onClick={() => {
-                          setForm((f) => ({ ...f, countryCode: cc }));
-                          setCcOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${
-                          form.countryCode === cc
-                            ? "text-[#23616E] font-medium"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        {cc}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <div className="flex rounded-[10px] border border-[#c7cbd1]">
+              <div className="border-r border-[#d6dbe1]">
+                <CountryCodePicker
+                  value={form.countryCode}
+                  onChange={(dial) => setForm((f) => ({ ...f, countryCode: dial }))}
+                  disabled={submitting}
+                />
               </div>
-
               <input
+                type="text"
                 value={form.contactNumber}
                 onChange={set("contactNumber")}
+                disabled={submitting}
                 placeholder="Enter contact number"
                 autoComplete="off"
-                className="flex-1 px-4 py-2.5 text-sm outline-none bg-white"
+                className="h-[48px] flex-1 px-4 text-[14px] text-[#20242a] outline-none placeholder:text-[#6b7280] disabled:bg-[#f8fafb]"
               />
             </div>
           </div>
@@ -460,7 +428,7 @@ function ParentModal({
             />
           </div>
 
-          {/* Password  */}
+          {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Password{isEdit ? " (leave blank to keep current)" : ""}
@@ -484,7 +452,7 @@ function ParentModal({
             </div>
           </div>
 
-          {/* Confirm Password — unchanged */}
+          {/* Confirm Password */}
           {!isEdit && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -510,7 +478,7 @@ function ParentModal({
             </div>
           )}
 
-          {/*  School searchable dropdown */}
+          {/* School searchable dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               School
@@ -575,7 +543,7 @@ function ParentModal({
             </div>
           </div>
 
-          {/*  StudentMultiSelect now has search inside it */}
+          {/* StudentMultiSelect */}
           <StudentMultiSelect
             label="Students"
             value={form.studentIds}
@@ -620,7 +588,6 @@ function ParentModal({
   );
 }
 
-// DeleteDialog 
 function DeleteDialog({ parentName, onConfirm, onCancel, deleting }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -653,7 +620,7 @@ function DeleteDialog({ parentName, onConfirm, onCancel, deleting }) {
   );
 }
 
-// Main Page 
+// ── Main Page ──
 const ITEMS_PER_PAGE = 10;
 
 export default function ParentsPage() {
@@ -736,7 +703,8 @@ export default function ParentsPage() {
   );
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f5f7fa] min-h-screen">
+    <div className="min-h-screen bg-[#eef6f9]">
+      {/* Modals */}
       {showModal && (
         <ParentModal
           initialData={null}
@@ -774,137 +742,144 @@ export default function ParentsPage() {
         />
       )}
 
-      <div className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 pt-3 pb-5">
         <div>
-          <h1 className="ty-page-title">Parents</h1>
-          <p className="mt-1 ty-subtitle">{totalCount} Parents</p>
+          <h1 className="text-4xl font-bold text-gray-900">Parents</h1>
+          <p className="mt-1 text-sm text-[#5b626a]">{totalCount} Parents</p>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-5 py-2.5 rounded-xl transition-colors"
+          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
         >
           <Plus size={18} />
           Add Parent
         </button>
       </div>
 
-      <div className="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 w-80">
-          <Search size={15} className="text-gray-400 shrink-0" />
+      {/* Search card */}
+      <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center">
+        <label className="relative block w-full max-w-[370px]">
+          <Search
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
+            size={20}
+            strokeWidth={2}
+          />
           <input
-            type="text"
+            type="search"
             placeholder="Search parents by name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full"
+            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] tracking-[0] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
           />
-        </div>
+        </label>
       </div>
 
-      <div className="flex-1 px-8 py-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 pt-5 pb-3">
-            <h2 className="ty-section-heading">Parents</h2>
-          </div>
+      {/* Parents list card */}
+      <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
+        <h2 className="mb-6 text-[24px] font-semibold leading-none tracking-[0] text-[#20242a]">
+          Parents
+        </h2>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-y border-gray-100">
-                  <th className="text-left px-6 py-3.5 ty-table-header">Name</th>
-                  <th className="text-left px-6 py-3.5 ty-table-header">Email</th>
-                  <th className="text-left px-6 py-3.5 ty-table-header">Contact</th>
-                  <th className="text-left px-6 py-3.5 ty-table-header">School</th>
-                  <th className="text-left px-6 py-3.5 ty-table-header">Students</th>
-                  <th className="px-6 py-3.5" />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] border-collapse text-sm">
+            <thead>
+              <tr className="bg-[#e9f2f5]">
+                <th className="rounded-l-2xl px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Name</th>
+                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Email</th>
+                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Contact</th>
+                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">School</th>
+                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Students</th>
+                <th className="rounded-r-2xl px-4 py-4 sm:px-5">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-16">
+                    <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
+                  </td>
                 </tr>
-              </thead>
-
-              <tbody className="divide-y divide-gray-50">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12">
-                      <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
+              ) : displayParents.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-16 text-sm text-[#5b626a]">
+                    No parents found.
+                  </td>
+                </tr>
+              ) : (
+                displayParents.map((p) => (
+                  <tr key={p.id} className="border-b border-[#eef0f2] last:border-b-0">
+                    <td className="px-4 py-5 text-[15px] font-medium text-[#2a2d32] sm:px-5">{p.name || "-"}</td>
+                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{p.contactEmail || "-"}</td>
+                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
+                      {p.contactNumber
+                        ? p.contactNumber.startsWith("+")
+                          ? p.contactNumber
+                          : `${p.countryCode || "+91"}-${p.contactNumber}`
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
+                      {p.school?.schoolName || p.school?.name || "-"}
+                    </td>
+                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
+                      {Array.isArray(p.students) && p.students.length > 0
+                        ? p.students.map((s) => s.name).filter(Boolean).join(", ")
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-5 text-right sm:px-5">
+                      <ActionMenu
+                        onEdit={() =>
+                          setEditData({
+                            id: p.id,
+                            name: p.name,
+                            contactEmail: p.contactEmail,
+                            contactNumber: p.contactNumber,
+                            countryCode: p.countryCode,
+                            schoolId: p.school?.id || p.schoolId || "",
+                            studentIds: Array.isArray(p.students)
+                              ? p.students.map((s) => s.id)
+                              : Array.isArray(p.studentIds)
+                              ? p.studentIds
+                              : [],
+                          })
+                        }
+                        onDelete={() => setDeleteTarget({ id: p.id, name: p.name })}
+                      />
                     </td>
                   </tr>
-                ) : displayParents.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-400 text-sm">
-                      No parents found.
-                    </td>
-                  </tr>
-                ) : (
-                  displayParents.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-6 py-4 ty-table-cell-primary">{p.name || "-"}</td>
-                      <td className="px-6 py-4 ty-table-cell">{p.contactEmail || "-"}</td>
-                      <td className="px-6 py-4 ty-table-cell">
-                        {p.contactNumber
-                          ? p.contactNumber.startsWith("+")
-                            ? p.contactNumber
-                            : `${p.countryCode || "+91"}-${p.contactNumber}`
-                          : "-"}
-                      </td>
-                      <td className="px-6 py-4 ty-table-cell">
-                        {p.school?.schoolName || p.school?.name || "-"}
-                      </td>
-                      <td className="px-6 py-4 ty-table-cell">
-                        {Array.isArray(p.students) && p.students.length > 0
-                          ? p.students.map((s) => s.name).filter(Boolean).join(", ")
-                          : "-"}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <ActionMenu
-                          onEdit={() =>
-                            setEditData({
-                              id: p.id,
-                              name: p.name,
-                              contactEmail: p.contactEmail,
-                              contactNumber: p.contactNumber,
-                              countryCode: p.countryCode,
-                              schoolId: p.school?.id || p.schoolId || "",
-                              studentIds: Array.isArray(p.students)
-                                ? p.students.map((s) => s.id)
-                                : Array.isArray(p.studentIds)
-                                ? p.studentIds
-                                : [],
-                            })
-                          }
-                          onDelete={() => setDeleteTarget({ id: p.id, name: p.name })}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {!loading && totalPages > 0 && (
-            <PaginationControls
-              className="border-t border-gray-100 px-6 py-4"
-              rowsPerPage={itemsPerPage}
-              rowsPerPageOptions={[10, 20, 50]}
-              onRowsPerPageChange={(nextItemsPerPage) => {
-                setItemsPerPage(nextItemsPerPage);
-                setPage(1);
-              }}
-              rangeLabel={`${(page - 1) * itemsPerPage + 1}-${Math.min(
-                page * itemsPerPage,
-                totalCount
-              )} of ${totalCount} parents`}
-              currentPage={page}
-              totalPages={totalPages}
-              hasPrev={page > 1}
-              hasNext={page < totalPages}
-              onPrev={() => setPage((p) => Math.max(1, p - 1))}
-              onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
-            />
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        {/* Pagination */}
+        {!loading && totalPages > 0 && (
+          <PaginationControls
+            className="border-t border-gray-100 px-6 py-4"
+            rowsPerPage={itemsPerPage}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={(nextItemsPerPage) => {
+              setItemsPerPage(nextItemsPerPage);
+              setPage(1);
+            }}
+            rangeLabel={`${(page - 1) * itemsPerPage + 1}-${Math.min(
+              page * itemsPerPage,
+              totalCount
+            )} of ${totalCount}`}
+            currentPage={page}
+            totalPages={totalPages}
+            hasPrev={page > 1}
+            hasNext={page < totalPages}
+            onPrev={() => setPage((p) => Math.max(1, p - 1))}
+            onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+          />
+        )}
+      </section>
     </div>
   );
 }
-
