@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
+  ImageIcon,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -13,13 +14,15 @@ import PaginationControls from "../components/PaginationControls";
 import {
   createSubject,
   deleteSubject,
+  fetchBoardGrades,
   fetchBoards,
-  fetchGrades,
   fetchSubjects,
   updateSubject,
+  uploadFile,
 } from "../api/authService";
 
 const PAGE_SIZE = 10;
+const DROPDOWN_LIMIT = 10;
 
 function extractList(response, keys) {
   if (Array.isArray(response)) return response;
@@ -173,6 +176,182 @@ function useOutsideClick(ref, onOutside) {
   }, [onOutside, ref]);
 }
 
+function useDebounce(value, delay = 350) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timeoutId);
+  }, [delay, value]);
+
+  return debouncedValue;
+}
+
+function SearchableSelect({
+  value,
+  onChange,
+  onSearch,
+  options = [],
+  placeholder = "Select",
+  searchPlaceholder = "Search...",
+  disabled = false,
+  loading = false,
+  emptyLabel = "No results found",
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  const debouncedQuery = useDebounce(query);
+
+  useOutsideClick(ref, () => {
+    setOpen(false);
+    setQuery("");
+  });
+
+  useEffect(() => {
+    if (open) {
+      onSearch?.(debouncedQuery);
+    }
+  }, [debouncedQuery, onSearch, open]);
+
+  function handleOpen() {
+    if (disabled) return;
+    setOpen((current) => !current);
+    setQuery("");
+    onSearch?.("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  function handleSelect(option) {
+    onChange(option);
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={handleOpen}
+        disabled={disabled}
+        className={`flex h-[40px] w-full items-center justify-between gap-3 rounded-[12px] border px-4 text-left text-[14px] outline-none transition ${
+          disabled
+            ? "cursor-not-allowed border-[#dce3e7] bg-[#f8fafb] text-[#9aa3aa]"
+            : "border-[#c7cbd1] bg-white text-[#5b626a] hover:border-[#155966]"
+        } ${open ? "border-[#155966] ring-2 ring-[#155966]/15" : ""}`}
+      >
+        <span className="min-w-0 flex-1 truncate">
+          {loading && !options.length ? "Loading..." : value?.label || placeholder}
+        </span>
+        {loading && open ? (
+          <Loader2 size={16} className="shrink-0 animate-spin text-[#155966]" />
+        ) : (
+          <ChevronDown
+            className={`shrink-0 text-[#5b626a] transition ${open ? "rotate-180" : ""}`}
+            size={16}
+            strokeWidth={2}
+          />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
+          <div className="flex items-center gap-2 border-b border-[#eef0f2] px-3 py-2">
+            <Search size={14} className="shrink-0 text-[#7c858c]" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder}
+              className="min-w-0 flex-1 bg-transparent text-sm text-[#20242a] outline-none placeholder:text-[#8d969c]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="rounded p-1 text-[#7c858c] transition hover:bg-[#f3f7f8]"
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-56 overflow-y-auto py-1">
+            {loading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 size={18} className="animate-spin text-[#155966]" />
+              </div>
+            ) : options.length === 0 ? (
+              <p className="px-4 py-4 text-center text-xs text-[#8d969c]">
+                {emptyLabel}
+              </p>
+            ) : (
+              options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelect(option)}
+                  className={`block w-full px-4 py-2.5 text-left text-sm transition hover:bg-[#f5fafc] ${
+                    value?.value === option.value
+                      ? "font-semibold text-[#155966]"
+                      : "text-[#30363b]"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function mapBoardOption(board) {
+  const mapped = mapBoard(board);
+  return {
+    ...mapped,
+    value: mapped.id,
+  };
+}
+
+function mapGradeOption(grade) {
+  const mapped = mapGrade(grade);
+  return {
+    ...mapped,
+    value: mapped.boardGradeId || mapped.id,
+  };
+}
+
+function normalizeBoardList(response) {
+  return extractList(response, ["boards", "educationBoards"]).map(mapBoardOption);
+}
+
+function normalizeGradeList(response) {
+  return extractList(response, ["boardGrades", "grades"]).map(mapGradeOption);
+}
+
+function getOption(options, value, fallbackLabel = "Selected") {
+  if (!value) return null;
+  return (
+    options.find((option) => option.value === value || option.id === value) ?? {
+      value,
+      id: value,
+      label: fallbackLabel,
+    }
+  );
+}
+
+function mergeOption(options, option) {
+  if (!option?.value) return options;
+  if (options.some((item) => item.value === option.value)) return options;
+  return [option, ...options];
+}
+
 function ActionMenu({ subjectName, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -223,7 +402,8 @@ function ActionMenu({ subjectName, onEdit, onDelete }) {
 function SubjectModal({
   initialData = null,
   boards,
-  grades,
+  loadingBoards,
+  onBoardSearch,
   onClose,
   onSuccess,
 }) {
@@ -237,7 +417,53 @@ function SubjectModal({
     imageUrl: Array.isArray(initialData?.images) ? initialData.images.join(", ") : "",
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [modalGrades, setModalGrades] = useState([]);
+  const [loadingGrades, setLoadingGrades] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
+  const selectedBoard = getOption(
+    boards,
+    safeId(form.boardId),
+    initialData?.boardName || "Selected Board"
+  );
+  const selectedGrade = getOption(
+    modalGrades,
+    safeId(form.boardGradeId),
+    initialData?.boardGradeLabel || "Selected Board Grade"
+  );
+
+  const gradeOptions = useMemo(
+    () => mergeOption(modalGrades, selectedGrade),
+    [modalGrades, selectedGrade]
+  );
+
+  const searchModalGrades = useCallback(
+    async (query = "") => {
+      if (!form.boardId) {
+        setModalGrades([]);
+        return;
+      }
+
+      try {
+        setLoadingGrades(true);
+        const response = await fetchBoardGrades({
+          page: 1,
+          limit: DROPDOWN_LIMIT,
+          order: "desc",
+          boardId: Number(form.boardId),
+          name: query.trim() || undefined,
+        });
+        setModalGrades(normalizeGradeList(response));
+      } catch (err) {
+        console.error("Failed to load board grades:", err);
+        setModalGrades([]);
+      } finally {
+        setLoadingGrades(false);
+      }
+    },
+    [form.boardId]
+  );
 
   useEffect(() => {
     function handleEscape(event) {
@@ -250,6 +476,10 @@ function SubjectModal({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose, saving]);
 
+  useEffect(() => {
+    searchModalGrades("");
+  }, [searchModalGrades]);
+
   const setValue = (key) => (event) => {
     const value =
       event.target.type === "checkbox"
@@ -258,18 +488,53 @@ function SubjectModal({
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleGradeChange = (event) => {
-    const boardGradeId = event.target.value;
-    const selectedGrade = grades.find(
-      (grade) => grade.boardGradeId === boardGradeId || grade.id === boardGradeId
-    );
-
+  const handleBoardChange = (option) => {
     setForm((current) => ({
       ...current,
-      boardGradeId,
-      boardId: selectedGrade?.boardId || current.boardId,
+      boardId: option?.value || "",
+      boardGradeId: "",
+    }));
+    setModalGrades([]);
+  };
+
+  const handleGradeChange = (option) => {
+    setForm((current) => ({
+      ...current,
+      boardGradeId: option?.value || "",
     }));
   };
+
+  async function handleImageChange(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setError("");
+      const url = await uploadFile(file);
+      if (!url) throw new Error("Upload did not return a file URL.");
+      setForm((current) => ({ ...current, imageUrl: url }));
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Image upload failed."
+      );
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  function removeImage() {
+    setForm((current) => ({ ...current, imageUrl: "" }));
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -289,10 +554,7 @@ function SubjectModal({
       return;
     }
 
-    const images = form.imageUrl
-      .split(",")
-      .map((url) => url.trim())
-      .filter(Boolean);
+    const images = form.imageUrl.trim() ? [form.imageUrl.trim()] : [];
 
     const payload = {
       name: form.name.trim(),
@@ -390,60 +652,97 @@ function SubjectModal({
           </label>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">
-                Board Grade *
-              </span>
-              <select
-                value={form.boardGradeId}
-                onChange={handleGradeChange}
-                disabled={saving}
-                className="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/10 disabled:bg-slate-50"
-              >
-                <option value="">Select Board Grade</option>
-                {grades.map((grade) => (
-                  <option key={grade.id} value={grade.boardGradeId}>
-                    {grade.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
+            <div className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">
                 Board *
               </span>
-              <select
-                value={form.boardId}
-                onChange={setValue("boardId")}
+              <SearchableSelect
+                value={selectedBoard}
+                onChange={handleBoardChange}
+                onSearch={onBoardSearch}
+                options={mergeOption(boards, selectedBoard)}
+                placeholder="Select Board"
+                searchPlaceholder="Search board..."
                 disabled={saving}
-                className="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/10 disabled:bg-slate-50"
-              >
-                <option value="">Select Board</option>
-                {boards.map((board) => (
-                  <option key={board.id} value={board.id}>
-                    {board.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                loading={loadingBoards}
+                emptyLabel="No boards found"
+              />
+            </div>
+
+            <div className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Board Grade *
+              </span>
+              <SearchableSelect
+                value={selectedGrade}
+                onChange={handleGradeChange}
+                onSearch={searchModalGrades}
+                options={gradeOptions}
+                placeholder={form.boardId ? "Select Board Grade" : "Select board first"}
+                searchPlaceholder="Search grade..."
+                disabled={saving || !form.boardId}
+                loading={loadingGrades}
+                emptyLabel="No grades found"
+              />
+            </div>
           </div>
 
-          <label className="block">
+          <div className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700">
-              Image URL
+              Subject Image
             </span>
-            <input
-              value={form.imageUrl}
-              onChange={setValue("imageUrl")}
-              disabled={saving}
-              placeholder="https://example.com/logo.png"
-              className="h-11 w-full rounded border border-slate-200 px-4 text-sm outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/10 disabled:bg-slate-50"
-            />
-            <span className="mt-1 block text-xs text-slate-400">
-              Use commas for multiple image URLs.
-            </span>
-          </label>
+            <div className="flex flex-col gap-3 rounded border border-slate-200 bg-slate-50/60 p-3 sm:flex-row sm:items-center">
+              <div className="flex h-24 w-full items-center justify-center overflow-hidden rounded border border-dashed border-slate-300 bg-white sm:w-32">
+                {form.imageUrl ? (
+                  <img
+                    src={form.imageUrl}
+                    alt={form.name ? `${form.name} subject` : "Subject"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon size={24} className="text-slate-400" />
+                )}
+              </div>
+
+              <div className="flex flex-1 flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={saving || uploadingImage}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded bg-[#155966] px-4 text-sm font-semibold text-white transition hover:bg-[#104a55] disabled:opacity-60"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon size={16} />
+                      Upload Image
+                    </>
+                  )}
+                </button>
+                {form.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    disabled={saving || uploadingImage}
+                    className="inline-flex h-10 items-center justify-center rounded border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-white disabled:opacity-60"
+                  >
+                    Remove Image
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
 
           <label className="flex items-center gap-3 rounded border border-slate-200 px-4 py-3">
             <input
@@ -534,7 +833,8 @@ export default function SubjectsPage() {
   const [selectedGradeId, setSelectedGradeId] = useState("");
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [loadingFilters, setLoadingFilters] = useState(true);
+  const [loadingBoards, setLoadingBoards] = useState(false);
+  const [loadingGrades, setLoadingGrades] = useState(false);
   const [error, setError] = useState("");
   const [modalMode, setModalMode] = useState(null);
   const [activeSubject, setActiveSubject] = useState(null);
@@ -542,60 +842,82 @@ export default function SubjectsPage() {
   const [deleting, setDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadFilterOptions() {
-      try {
-        setLoadingFilters(true);
-        const [gradesResponse, boardsResponse] = await Promise.all([
-          fetchGrades(),
-          fetchBoards(),
-        ]);
-
-        if (!cancelled) {
-          setGrades(extractList(gradesResponse, ["grades"]).map(mapGrade));
-          setBoards(extractList(boardsResponse, ["boards", "educationBoards"]).map(mapBoard));
-        }
-      } catch (err) {
-        console.error("Failed to load subject filters:", err);
-      } finally {
-        if (!cancelled) {
-          setLoadingFilters(false);
-        }
-      }
+  const searchBoards = useCallback(async (query = "") => {
+    try {
+      setLoadingBoards(true);
+      const response = await fetchBoards({
+        page: 1,
+        limit: DROPDOWN_LIMIT,
+        order: "desc",
+        name: query.trim() || undefined,
+      });
+      setBoards(normalizeBoardList(response));
+    } catch (err) {
+      console.error("Failed to load education boards:", err);
+      setBoards([]);
+    } finally {
+      setLoadingBoards(false);
     }
-
-    loadFilterOptions();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  const gradeOptions = useMemo(() => {
-    if (!selectedBoardId) return grades;
-    return grades.filter((grade) => grade.boardId === selectedBoardId);
-  }, [grades, selectedBoardId]);
+  const searchGrades = useCallback(
+    async (query = "") => {
+      if (!selectedBoardId) {
+        setGrades([]);
+        return;
+      }
+
+      try {
+        setLoadingGrades(true);
+        const response = await fetchBoardGrades({
+          page: 1,
+          limit: DROPDOWN_LIMIT,
+          order: "desc",
+          boardId: Number(selectedBoardId),
+          name: query.trim() || undefined,
+        });
+        setGrades(normalizeGradeList(response));
+      } catch (err) {
+        console.error("Failed to load board grades:", err);
+        setGrades([]);
+      } finally {
+        setLoadingGrades(false);
+      }
+    },
+    [selectedBoardId]
+  );
 
   useEffect(() => {
-    if (!selectedGradeId) return;
+    searchBoards("");
+  }, [searchBoards]);
 
-    const gradeStillVisible = gradeOptions.some(
-      (grade) => grade.id === selectedGradeId || grade.boardGradeId === selectedGradeId
-    );
+  useEffect(() => {
+    setSelectedGradeId("");
+    setGrades([]);
 
-    if (!gradeStillVisible) {
-      setSelectedGradeId("");
-      setPage(1);
+    if (selectedBoardId) {
+      searchGrades("");
     }
-  }, [gradeOptions, selectedGradeId]);
+  }, [searchGrades, selectedBoardId]);
+
+  const selectedBoard = useMemo(
+    () => getOption(boards, selectedBoardId, "Selected Board"),
+    [boards, selectedBoardId]
+  );
 
   const selectedGrade = useMemo(
-    () =>
-      grades.find(
-        (grade) => grade.id === selectedGradeId || grade.boardGradeId === selectedGradeId
-      ) ?? null,
+    () => getOption(grades, selectedGradeId, "Selected Board Grade"),
     [grades, selectedGradeId]
+  );
+
+  const boardOptions = useMemo(
+    () => [{ value: "", id: "", label: "All Boards" }, ...mergeOption(boards, selectedBoard)],
+    [boards, selectedBoard]
+  );
+
+  const gradeOptions = useMemo(
+    () => [{ value: "", id: "", label: "All Board Grades" }, ...mergeOption(grades, selectedGrade)],
+    [grades, selectedGrade]
   );
 
   useEffect(() => {
@@ -611,7 +933,7 @@ export default function SubjectsPage() {
           limit: pageSize,
           order: "desc",
           name: search.trim() || undefined,
-          boardGradeId: selectedGrade?.boardGradeId || undefined,
+          boardGradeId: selectedGradeId || undefined,
           boardId: selectedBoardId || undefined,
         });
 
@@ -645,7 +967,7 @@ export default function SubjectsPage() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [boards, grades, page, pageSize, refreshKey, search, selectedBoardId, selectedGrade]);
+  }, [boards, grades, page, pageSize, refreshKey, search, selectedBoardId, selectedGradeId]);
 
   const totalSubjects = pagination?.totalCount ?? subjects.length;
 
@@ -693,10 +1015,10 @@ export default function SubjectsPage() {
   const endRow = Math.min(page * pageSize, totalSubjects);
 
   return (
-    <div className="min-h-screen bg-[#edf6f8] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+          <h1 className="ty-page-title">
             Subjects
           </h1>
           <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
@@ -734,53 +1056,38 @@ export default function SubjectsPage() {
         </label>
 
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
-          <label className="relative block w-full sm:w-[200px]">
-            <select
-              value={selectedGradeId}
-              onChange={(event) => {
-                setSelectedGradeId(event.target.value);
+          <div className="relative block w-full sm:w-[190px]">
+            <SearchableSelect
+              value={selectedBoard}
+              onChange={(option) => {
+                setSelectedBoardId(option?.value || "");
                 setPage(1);
               }}
-              disabled={loadingFilters}
-              className="h-[40px] w-full appearance-none rounded-[12px] border border-[#c7cbd1] bg-white px-4 pr-10 text-[14px] text-[#5b626a] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15 disabled:bg-[#f8fafb]"
-            >
-              <option value="">All Board Grade</option>
-              {gradeOptions.map((grade) => (
-                <option key={grade.id} value={grade.id}>
-                  {grade.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5b626a]"
-              size={16}
-              strokeWidth={2}
+              onSearch={searchBoards}
+              options={boardOptions}
+              placeholder="All Boards"
+              searchPlaceholder="Search board..."
+              loading={loadingBoards}
+              emptyLabel="No boards found"
             />
-          </label>
+          </div>
 
-          <label className="relative block w-full sm:w-[160px]">
-            <select
-              value={selectedBoardId}
-              onChange={(event) => {
-                setSelectedBoardId(event.target.value);
+          <div className="relative block w-full sm:w-[220px]">
+            <SearchableSelect
+              value={selectedGrade}
+              onChange={(option) => {
+                setSelectedGradeId(option?.value || "");
                 setPage(1);
               }}
-              disabled={loadingFilters}
-              className="h-[40px] w-full appearance-none rounded-[12px] border border-[#c7cbd1] bg-white px-4 pr-10 text-[14px] text-[#5b626a] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15 disabled:bg-[#f8fafb]"
-            >
-              <option value="">All Board</option>
-              {boards.map((board) => (
-                <option key={board.id} value={board.id}>
-                  {board.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5b626a]"
-              size={16}
-              strokeWidth={2}
+              onSearch={searchGrades}
+              options={gradeOptions}
+              placeholder={selectedBoardId ? "All Board Grades" : "Select board first"}
+              searchPlaceholder="Search grade..."
+              disabled={!selectedBoardId}
+              loading={loadingGrades}
+              emptyLabel="No grades found"
             />
-          </label>
+          </div>
         </div>
       </div>
 
@@ -895,7 +1202,8 @@ export default function SubjectsPage() {
       {modalMode === "add" && (
         <SubjectModal
           boards={boards}
-          grades={grades}
+          loadingBoards={loadingBoards}
+          onBoardSearch={searchBoards}
           onClose={closeModal}
           onSuccess={() => {
             setPage(1);
@@ -908,7 +1216,8 @@ export default function SubjectsPage() {
         <SubjectModal
           initialData={activeSubject}
           boards={boards}
-          grades={grades}
+          loadingBoards={loadingBoards}
+          onBoardSearch={searchBoards}
           onClose={closeModal}
           onSuccess={() => {
             setRefreshKey((value) => value + 1);

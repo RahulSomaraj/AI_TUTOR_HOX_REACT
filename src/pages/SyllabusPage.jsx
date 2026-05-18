@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -342,6 +342,183 @@ function useOutsideClick(ref, onOutside) {
   }, [onOutside, ref]);
 }
 
+function useDebounce(value, delay = 400) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+const BOARD_DROPDOWN_LIMIT = 10;
+
+async function fetchAllBoardPages(query = "") {
+  let page = 1;
+  let all = [];
+  while (true) {
+    const res = await fetchBoards({
+      page,
+      limit: BOARD_DROPDOWN_LIMIT,
+      name: query || undefined,
+    });
+    const list = extractList(res, ["boards"]);
+    all = [...all, ...list];
+    if (list.length < BOARD_DROPDOWN_LIMIT) break;
+    page++;
+    if (page > 20) break;
+  }
+  return all;
+}
+
+function useBoardSearch() {
+  const [boards, setBoards] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback((query = "") => {
+    setLoading(true);
+    fetchAllBoardPages(query)
+      .then((list) =>
+        setBoards(
+          list
+            .map(mapBoard)
+            .filter((b) => b.id != null)
+            .map((b) => ({ value: String(b.id), label: b.label }))
+        )
+      )
+      .catch(() => setBoards([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { boards, loading, search };
+}
+
+function BoardSelect({
+  value,
+  onChange,
+  placeholder = "Select Board",
+  disabled = false,
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedLabel, setSelectedLabel] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  const { boards, loading, search } = useBoardSearch();
+  useOutsideClick(ref, () => {
+    setOpen(false);
+    setQuery("");
+  });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    search("");
+  }, [search]);
+
+  useEffect(() => {
+    if (open) search(debouncedQuery);
+  }, [debouncedQuery, open, search]);
+
+  useEffect(() => {
+    if (!value) {
+      setSelectedLabel("");
+      return;
+    }
+    const match = boards.find((b) => b.value === String(value));
+    if (match) setSelectedLabel(match.label);
+  }, [boards, value]);
+
+  const handleOpen = () => {
+    if (disabled) return;
+    setOpen((v) => !v);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={handleOpen}
+        disabled={disabled}
+        className={`h-11 w-full flex items-center justify-between rounded border bg-white px-4 text-sm outline-none transition
+          ${open ? "border-[#155966] ring-2 ring-[#155966]/10" : "border-slate-200"}
+          ${disabled ? "cursor-not-allowed bg-slate-50 text-slate-400" : "text-slate-700"}`}
+      >
+        <span className={selectedLabel ? "text-slate-800" : "text-slate-400"}>
+          {loading && !selectedLabel ? "Loading..." : selectedLabel || placeholder}
+        </span>
+        {loading && !selectedLabel ? (
+          <Loader2 size={14} className="animate-spin text-slate-400" />
+        ) : (
+          <ChevronDown
+            size={16}
+            className={`text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="border-b border-slate-100 p-2">
+            <div className="relative">
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search board..."
+                className="w-full rounded-md border border-slate-200 py-1.5 pl-7 pr-7 text-sm focus:outline-none focus:ring-2 focus:ring-[#155966]/15"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <ul className="max-h-48 overflow-y-auto py-1">
+            {loading ? (
+              <li className="flex justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#155966]" />
+              </li>
+            ) : boards.length === 0 ? (
+              <li className="px-4 py-3 text-center text-sm text-slate-400">
+                No boards found
+              </li>
+            ) : (
+              boards.map((b) => (
+                <li
+                  key={b.value}
+                  onClick={() => {
+                    onChange(b.value);
+                    setSelectedLabel(b.label);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className={`cursor-pointer px-4 py-2 text-sm transition-colors hover:bg-[#f5fafc]
+                    ${String(value) === b.value ? "font-medium text-[#155966]" : "text-slate-700"}`}
+                >
+                  {b.label}
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SubjectCodeDropdown({ options, value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -439,7 +616,7 @@ function SubjectCodeDropdown({ options, value, onChange }) {
   );
 }
 
-function AddSubjectModal({ boards, grades, onClose, onCreated }) {
+function AddSubjectModal({ grades, onClose, onCreated }) {
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -588,18 +765,12 @@ function AddSubjectModal({ boards, grades, onClose, onCreated }) {
               <span className="mb-1 block text-sm font-medium text-slate-700">
                 Board *
               </span>
-              <select
+              <BoardSelect
                 value={form.boardId}
-                onChange={setValue("boardId")}
-                className="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/10"
-              >
-                <option value="">Select Board</option>
-                {boards.map((board) => (
-                  <option key={board.id} value={board.id}>
-                    {board.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(nextId) =>
+                  setForm((current) => ({ ...current, boardId: nextId }))
+                }
+              />
             </label>
           </div>
 
@@ -658,7 +829,6 @@ export default function SyllabusPage() {
   const [subjects, setSubjects] = useState([]);
   const [allSubjectOptions, setAllSubjectOptions] = useState([]);
   const [grades, setGrades] = useState([]);
-  const [boards, setBoards] = useState([]);
   const [selectedGradeId, setSelectedGradeId] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCode, setSelectedCode] = useState("");
@@ -689,13 +859,9 @@ export default function SyllabusPage() {
 
     async function loadOptions() {
       try {
-        const [gradesResponse, boardsResponse] = await Promise.all([
-          fetchGrades(),
-          fetchBoards(),
-        ]);
+        const gradesResponse = await fetchGrades();
         if (!cancelled) {
           setGrades(extractList(gradesResponse, ["grades"]).map(mapGrade));
-          setBoards(extractList(boardsResponse, ["boards"]).map(mapBoard));
         }
       } catch (err) {
         console.error("Failed to load subject options:", err);
@@ -829,9 +995,9 @@ export default function SyllabusPage() {
   const endRow = Math.min(currentPage * pageSize, totalSubjects);
 
   return (
-    <main className="min-h-full bg-[#edf6f8] px-6 py-6">
+    <main className="ty-page-shell">
       <div className="mb-7 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-[#24272a]">Syllabus</h1>
+        <h1 className="ty-page-title">Syllabus</h1>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
@@ -960,7 +1126,6 @@ export default function SyllabusPage() {
 
       {showAddModal && (
         <AddSubjectModal
-          boards={boards}
           grades={grades}
           onClose={() => setShowAddModal(false)}
           onCreated={() => {

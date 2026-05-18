@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -123,6 +123,171 @@ function useOutsideClick(ref, onOutside) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onOutside, ref]);
+}
+
+function useDebounce(value, delay = 400) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+const SUBJECT_DROPDOWN_LIMIT = 10;
+
+async function fetchAllSubjectPages(query = "") {
+  let page = 1;
+  let all = [];
+  while (true) {
+    const res = await fetchSubjects({
+      page,
+      limit: SUBJECT_DROPDOWN_LIMIT,
+      order: "asc",
+      name: query || undefined,
+    });
+    const list = extractList(res, ["subjects"]);
+    all = [...all, ...list];
+    if (list.length < SUBJECT_DROPDOWN_LIMIT) break;
+    page++;
+    if (page > 20) break;
+  }
+  return all;
+}
+
+function useSubjectSearch() {
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback((query = "") => {
+    setLoading(true);
+    fetchAllSubjectPages(query)
+      .then((list) =>
+        setSubjects(
+          list
+            .map(mapSubjectOption)
+            .filter((s) => s.id)
+            .map((s) => ({ value: String(s.id), label: s.name }))
+        )
+      )
+      .catch(() => setSubjects([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { subjects, loading, search };
+}
+
+function SubjectFilter({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  const { subjects, loading, search } = useSubjectSearch();
+  useOutsideClick(ref, () => {
+    setOpen(false);
+    setQuery("");
+  });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    search("");
+  }, [search]);
+
+  useEffect(() => {
+    if (open) search(debouncedQuery);
+  }, [debouncedQuery, open, search]);
+
+  const allOption = { value: "", label: "All Subjects" };
+  const options = [allOption, ...subjects];
+  const selectedLabel = value
+    ? subjects.find((s) => s.value === String(value))?.label || "Subject selected"
+    : "All Subjects";
+
+  const handleOpen = () => {
+    setOpen((v) => !v);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  return (
+    <div className="relative w-full sm:w-[240px]" ref={ref}>
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="h-[40px] w-full flex items-center justify-between rounded-[12px] border border-[#c7cbd1] bg-white px-4 text-[14px] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
+      >
+        <span className={value ? "text-[#20242a]" : "text-[#5b626a]"}>
+          {loading && subjects.length === 0 ? "Loading..." : selectedLabel}
+        </span>
+        {loading && subjects.length === 0 ? (
+          <Loader2 size={13} className="animate-spin text-[#6b7280] flex-shrink-0" />
+        ) : (
+          <ChevronDown
+            size={16}
+            className={`text-[#5b626a] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+            strokeWidth={2}
+          />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search subject..."
+                className="w-full pl-7 pr-7 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <ul className="max-h-48 overflow-y-auto py-1">
+            {loading ? (
+              <li className="flex justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#155966]" />
+              </li>
+            ) : options.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-gray-400 text-center">
+                No subjects found
+              </li>
+            ) : (
+              options.map((s) => (
+                <li
+                  key={s.value || "all"}
+                  onClick={() => {
+                    onChange(s.value);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors
+                    ${String(value) === s.value ? "text-[#155966] font-medium" : "text-[#20242a]"}`}
+                >
+                  {s.label}
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ActionMenu({ textbookTitle, onView, onEdit, onDelete }) {
@@ -485,9 +650,7 @@ export default function TextbooksPage() {
         const response = await fetchTextbooks({
           page,
           limit: pageSize,
-          order: "desc",
           subjectId: selectedSubjectId || undefined,
-          search: search.trim() || undefined,
           source: search.trim() || undefined,
         });
 
@@ -598,10 +761,10 @@ export default function TextbooksPage() {
   const rowsToShow = search.trim() ? filteredTextbooks : textbooks;
 
   return (
-    <div className="min-h-screen bg-[#edf6f8] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+          <h1 className="ty-page-title">
             Syllabus
           </h1>
           <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
@@ -638,29 +801,13 @@ export default function TextbooksPage() {
           />
         </label>
 
-        <label className="relative block w-full sm:w-[240px]">
-          <select
-            value={selectedSubjectId}
-            onChange={(event) => {
-              setSelectedSubjectId(event.target.value);
-              setPage(1);
-            }}
-            disabled={loadingSubjects}
-            className="h-[40px] w-full appearance-none rounded-[12px] border border-[#c7cbd1] bg-white px-4 pr-10 text-[14px] text-[#5b626a] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15 disabled:bg-[#f8fafb]"
-          >
-            <option value="">All Subjects</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5b626a]"
-            size={16}
-            strokeWidth={2}
-          />
-        </label>
+        <SubjectFilter
+          value={selectedSubjectId}
+          onChange={(nextId) => {
+            setSelectedSubjectId(nextId);
+            setPage(1);
+          }}
+        />
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">

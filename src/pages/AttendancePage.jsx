@@ -299,10 +299,10 @@ const Attendance = () => {
   ];
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
+    <div className="ty-page-shell flex flex-col">
 
       {/* ── Page Header  ── */}
-      <div className="px-6 pt-3 pb-5">
+      <div className="mb-8">
         <AttendanceHeader
           startDate={startDate}
           endDate={endDate}
@@ -314,7 +314,7 @@ const Attendance = () => {
       </div>
 
       {/* ── Filters Card  ── */}
-      <div className="mx-6 mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
+      <div className="mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
         <AttendanceFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -337,7 +337,7 @@ const Attendance = () => {
       </div>
 
       {/* ── Main Content Row ── */}
-      <div className="flex gap-5 mx-6 mb-6">
+      <div className="flex gap-5 mb-6">
 
         {/* ── Attendance Table Card ── */}
         <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-200 overflow-hidden">

@@ -331,7 +331,7 @@ export default function BannerPage() {
     str.length > n ? str.slice(0, n) + "…" : str;
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
+    <div className="ty-page-shell flex flex-col">
 
       {/* ── Modals ── */}
       {showAdd && (
@@ -375,8 +375,8 @@ export default function BannerPage() {
       )}
 
       {/* ── Page Header  ── */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-5">
-        <h1 className="text-4xl font-bold text-gray-900">Banner</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="ty-page-title">Banner</h1>
         <button
           onClick={() => setShowAdd(true)}
           className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
@@ -387,7 +387,7 @@ export default function BannerPage() {
       </div>
 
       {/* ── Search Card ── */}
-      <div className="mx-6 mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
+      <div className="mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
         <div className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-2 w-96 bg-[#F5F6FA]">
           <Search size={15} className="text-gray-900 shrink-0" />
           <input
@@ -401,7 +401,7 @@ export default function BannerPage() {
       </div>
 
       {/* ── Banner List Card ── */}
-      <div className="mx-6 mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
+      <div className="mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
 
         <div className="px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-800">Banner List</h2>

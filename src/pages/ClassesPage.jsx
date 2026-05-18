@@ -737,7 +737,7 @@ export default function ClassesPage() {
   const rangeEnd = Math.min(page * itemsPerPage, totalCount);
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
+    <div className="ty-page-shell flex flex-col">
 
       {showAddModal && (
         <AddClassModal
@@ -782,8 +782,8 @@ export default function ClassesPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between px-6 pt-3 pb-5">
-        <h1 className="text-4xl font-bold text-gray-900">Classes</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="ty-page-title">Classes</h1>
         <button
           onClick={() => setShowAddModal(true)}
           className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-6 py-3 rounded-xl transition-colors"
@@ -793,7 +793,7 @@ export default function ClassesPage() {
         </button>
       </div>
 
-      <div className="mx-6 mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-2 w-96 bg-[#F5F6FA]">
           <Search size={15} className="text-gray-900 shrink-0" />
           <input
@@ -807,7 +807,7 @@ export default function ClassesPage() {
         <SchoolFilter value={filterSchoolId} onChange={handleSchoolFilter} />
       </div>
 
-      <div className="mx-6 mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
+      <div className="mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">
         <div className="px-6 py-4">
           <h2 className="ty-section-heading">Classes</h2>
         </div>

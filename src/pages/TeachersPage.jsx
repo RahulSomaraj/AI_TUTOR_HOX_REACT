@@ -871,9 +871,9 @@ export default function TeachersPage() {
   const endRow = Math.min(page * limit, totalTeachers);
 
   return (
-    <div className="min-h-screen bg-[#eef6f9]">
-      <div className="flex items-center justify-between px-6 pt-3 pb-5">
-        <h1 className="text-4xl font-bold text-gray-900">Teachers</h1>
+    <div className="ty-page-shell">
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="ty-page-title">Teachers</h1>
         <button
           type="button"
           onClick={openAddModal}

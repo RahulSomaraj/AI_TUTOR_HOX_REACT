@@ -888,7 +888,7 @@ export default function ChaptersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#edf6f8] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3">

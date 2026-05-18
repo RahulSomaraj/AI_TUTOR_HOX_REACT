@@ -559,10 +559,10 @@ export default function EducationBoardsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#eef6f9] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+          <h1 className="ty-page-title">
             Education Boards
           </h1>
           <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">

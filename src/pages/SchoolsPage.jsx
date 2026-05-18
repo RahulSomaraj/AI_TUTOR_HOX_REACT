@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ImageIcon,
@@ -155,6 +155,170 @@ function useOutsideClick(ref, onOutside) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onOutside, ref]);
+}
+
+function useDebounce(value, delay = 400) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+const BOARD_DROPDOWN_LIMIT = 10;
+
+async function fetchAllBoardPages(query = "") {
+  let page = 1;
+  let all = [];
+  while (true) {
+    const res = await fetchBoards({
+      page,
+      limit: BOARD_DROPDOWN_LIMIT,
+      name: query || undefined,
+    });
+    const list = extractBoards(res);
+    all = [...all, ...list];
+    if (list.length < BOARD_DROPDOWN_LIMIT) break;
+    page++;
+    if (page > 20) break;
+  }
+  return all;
+}
+
+function useBoardSearch() {
+  const [boards, setBoards] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback((query = "") => {
+    setLoading(true);
+    fetchAllBoardPages(query)
+      .then((list) =>
+        setBoards(
+          list
+            .map(mapBoardOption)
+            .filter((board) => board.id)
+            .map((board) => ({ value: board.id, label: board.name }))
+        )
+      )
+      .catch(() => setBoards([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { boards, loading, search };
+}
+
+function BoardFilter({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  const { boards, loading, search } = useBoardSearch();
+  useOutsideClick(ref, () => {
+    setOpen(false);
+    setQuery("");
+  });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    search("");
+  }, [search]);
+
+  useEffect(() => {
+    if (open) search(debouncedQuery);
+  }, [debouncedQuery, open, search]);
+
+  const allOption = { value: "", label: "All Board" };
+  const options = [allOption, ...boards];
+  const selectedLabel = value
+    ? boards.find((b) => b.value === value)?.label || "Board selected"
+    : "All Board";
+
+  const handleOpen = () => {
+    setOpen((v) => !v);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  return (
+    <div className="relative w-full sm:w-[200px]" ref={ref}>
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="h-[40px] w-full flex items-center justify-between rounded-[12px] border border-[#c7cbd1] bg-white px-4 text-[14px] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
+      >
+        <span className={value ? "text-[#20242a]" : "text-[#5b626a]"}>
+          {loading && boards.length === 0 ? "Loading..." : selectedLabel}
+        </span>
+        {loading && boards.length === 0 ? (
+          <Loader2 size={13} className="animate-spin text-[#6b7280] flex-shrink-0" />
+        ) : (
+          <ChevronDown
+            size={16}
+            className={`text-[#5b626a] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+            strokeWidth={2}
+          />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search board..."
+                className="w-full pl-7 pr-7 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <ul className="max-h-48 overflow-y-auto py-1">
+            {loading ? (
+              <li className="flex justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#155966]" />
+              </li>
+            ) : options.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-gray-400 text-center">
+                No boards found
+              </li>
+            ) : (
+              options.map((b) => (
+                <li
+                  key={b.value || "all"}
+                  onClick={() => {
+                    onChange(b.value);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors
+                    ${value === b.value ? "text-[#155966] font-medium" : "text-[#20242a]"}`}
+                >
+                  {b.label}
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ActionMenu({ schoolName, onEdit, onDelete }) {
@@ -430,7 +594,7 @@ function SchoolModal({
         <div className="space-y-5">
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-[#20242a]">
-              School Name
+              School Name *
             </span>
             <input
               value={form.schoolName}
@@ -443,7 +607,7 @@ function SchoolModal({
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-[#20242a]">
-              Address
+              Address *
             </span>
             <textarea
               value={form.address}
@@ -457,7 +621,7 @@ function SchoolModal({
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-[#20242a]">
-              School Code
+              School Code *
             </span>
             <input
               value={form.schoolCode}
@@ -470,7 +634,7 @@ function SchoolModal({
 
           <label className="relative block">
             <span className="mb-2 block text-sm font-medium text-[#20242a]">
-              Board
+              Board *
             </span>
             <select
               value={form.boardId}
@@ -501,25 +665,23 @@ function SchoolModal({
                 onChange={setValue("schoolImage")}
                 disabled={saving || uploading}
                 placeholder="https://example.com/images/armyps.jpg"
-                className="h-12 w-full rounded-[14px] border border-[#c7cbd1] px-5 pr-12 text-[16px] text-[#20242a] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/10 disabled:bg-slate-50"
+                className="h-12 w-full rounded-[14px] border border-[#c7cbd1] px-5 pr-14 text-[16px] text-[#20242a] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/10 disabled:bg-slate-50"
               />
-              <ImageIcon
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#155966]"
-                size={18}
-              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={saving || uploading}
+                className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#155966] transition hover:bg-[#e8f3f6] disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Upload school image"
+                title="Upload school image"
+              >
+                {uploading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <ImageIcon size={18} />
+                )}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={saving || uploading}
-              className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] bg-[#155966] px-5 text-[15px] font-semibold text-white transition hover:bg-[#104a55] disabled:opacity-60"
-            >
-              {uploading ? (
-                <><Loader2 size={16} className="animate-spin" /> Uploading...</>
-              ) : (
-                <><ImageIcon size={16} /> Upload Image</>
-              )}
-            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -571,7 +733,6 @@ export default function SchoolsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
-  const [loadingBoards, setLoadingBoards] = useState(true);
   const [error, setError] = useState("");
   const [modalMode, setModalMode] = useState(null);
   const [activeSchool, setActiveSchool] = useState(null);
@@ -595,7 +756,6 @@ export default function SchoolsPage() {
 
     async function loadBoards() {
       try {
-        setLoadingBoards(true);
         const response = await fetchBoards();
         const mappedBoards = extractBoards(response).map(mapBoardOption);
 
@@ -606,10 +766,6 @@ export default function SchoolsPage() {
         console.error("Failed to load boards for schools:", err);
         if (!cancelled) {
           setBoardOptions([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingBoards(false);
         }
       }
     }
@@ -712,10 +868,10 @@ export default function SchoolsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef6f9] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-[0] text-[#20242a]">
+          <h1 className="ty-page-title">
             Schools
           </h1>
           <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
@@ -752,29 +908,13 @@ export default function SchoolsPage() {
           />
         </label>
 
-        <label className="relative block w-full sm:w-[180px]">
-          <select
-            value={boardId}
-            onChange={(event) => {
-              setBoardId(event.target.value);
-              setPage(1);
-            }}
-            disabled={loadingBoards}
-            className="h-[40px] w-full appearance-none rounded-[12px] border border-[#c7cbd1] bg-white px-4 pr-10 text-[14px] text-[#5b626a] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15 disabled:bg-[#f8fafb]"
-          >
-            <option value="">All Board</option>
-            {boardOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5b626a]"
-            size={16}
-            strokeWidth={2}
-          />
-        </label>
+        <BoardFilter
+          value={boardId}
+          onChange={(nextId) => {
+            setBoardId(nextId);
+            setPage(1);
+          }}
+        />
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">

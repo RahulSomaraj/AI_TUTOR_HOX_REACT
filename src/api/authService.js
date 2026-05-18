@@ -33,8 +33,9 @@ export async function loginAndGetToken(username, password) {
     const cleanToken = rawToken.replace(/^Bearer\s+/i, "");
     const loggedInUser = data?.data?.user || data?.data?.admin || data?.user || {};
     const adminUser = {
+      id: loggedInUser.id || loggedInUser._id || null,
       name: getAdminDisplayName(loggedInUser),
-      role: loggedInUser.role || "Admin",
+      role: loggedInUser.role || loggedInUser.userType || "Admin",
       avatar: loggedInUser.avatar || loggedInUser.profileImage || "",
     };
 
@@ -48,6 +49,21 @@ export async function loginAndGetToken(username, password) {
     console.error("Login failed:", err);
     throw err;
   }
+}
+
+export async function adminLogout() {
+  const { data } = await api.post("/admin/logout");
+  return data;
+}
+
+export async function deleteAdminAccount(id) {
+  const { data } = await api.delete(`/admin/users/${id}`);
+  return data;
+}
+
+export async function fetchMyProfile() {
+  const { data } = await api.get("/my-profile");
+  return data?.data ?? data;
 }
 
 export async function refreshAccessToken() {

@@ -703,7 +703,7 @@ export default function ParentsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#eef6f9]">
+    <div className="ty-page-shell">
       {/* Modals */}
       {showModal && (
         <ParentModal
@@ -743,9 +743,9 @@ export default function ParentsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-5">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Parents</h1>
+          <h1 className="ty-page-title">Parents</h1>
           <p className="mt-1 text-sm text-[#5b626a]">{totalCount} Parents</p>
         </div>
 

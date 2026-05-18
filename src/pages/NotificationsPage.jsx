@@ -568,11 +568,11 @@ export default function NotificationsPage() {
   const endRow = Math.min(page * pageSize, totalNotifications);
 
   return (
-    <div className="min-h-screen bg-[#eaf4f9] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mx-auto max-w-[1600px]">
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-[32px] font-bold leading-tight text-[#20242a] sm:text-[42px]">
+            <h1 className="ty-page-title">
               Notifications
             </h1>
             <p className="mt-2 text-lg text-[#2f3941]">

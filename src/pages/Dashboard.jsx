@@ -36,8 +36,8 @@ function Dashboard() {
   ];
 
   return (
-    <section className="space-y-6 p-6">
-      <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
+    <section className="ty-page-shell space-y-6">
+      <h1 className="ty-page-title">Dashboard</h1>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (

@@ -101,7 +101,7 @@ export default function TopicDetailPage() {
 
   if (!topic) {
     return (
-      <div className="min-h-screen bg-[#edf6f8] px-4 py-7 sm:px-6 lg:px-8">
+      <div className="ty-page-shell">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -110,7 +110,7 @@ export default function TopicDetailPage() {
           >
             <ArrowLeft size={22} />
           </button>
-          <h1 className="text-[32px] font-bold text-[#20242a]">Topic Details</h1>
+          <h1 className="ty-page-title">Topic Details</h1>
         </div>
         <p className="mt-6 text-sm text-[#5b626a]">Topic not found.</p>
       </div>
@@ -118,7 +118,7 @@ export default function TopicDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#edf6f8] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       <div className="mb-2 flex items-center gap-3">
         <button
           type="button"
@@ -132,7 +132,7 @@ export default function TopicDetailPage() {
         >
           <ArrowLeft size={22} />
         </button>
-        <h1 className="text-[32px] font-bold leading-tight text-[#20242a]">
+        <h1 className="ty-page-title">
           Topic Details
         </h1>
       </div>

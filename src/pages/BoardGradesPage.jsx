@@ -576,7 +576,7 @@ export default function BoardGradesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef6f9] px-4 py-7 sm:px-6 lg:px-8">
+    <div className="ty-page-shell">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">

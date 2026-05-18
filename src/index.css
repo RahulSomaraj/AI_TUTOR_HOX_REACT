@@ -8,6 +8,11 @@
     @apply text-[32px] font-bold leading-tight tracking-[0] text-[#20242a];
   }
 
+  /* Standard outer spacing for admin pages */
+  .ty-page-shell {
+    @apply min-h-screen bg-[#eef6f9] px-4 py-7 sm:px-6 lg:px-8;
+  }
+
   /* Subtitle / count line directly below the page title */
   .ty-subtitle {
     @apply text-[14px] leading-none text-[#5b626a];

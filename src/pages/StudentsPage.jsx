@@ -678,7 +678,7 @@ export default function StudentsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#eef6f9]">
+    <div className="ty-page-shell">
       {/* Modals */}
       {showModal && (
         <StudentModal
@@ -714,9 +714,9 @@ export default function StudentsPage() {
       )}
 
       {/* Header: title + count + button  */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-5">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Students</h1>
+          <h1 className="ty-page-title">Students</h1>
           <p className="mt-1 text-sm text-[#5b626a]">
             {filterSchoolId
               ? `${totalCount} Students in selected school`
