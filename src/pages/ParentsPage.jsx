@@ -21,6 +21,211 @@ function useOutsideClick(ref, cb) {
   }, [ref, cb]);
 }
 
+function useDebounce(value, delay = 400) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+//  Fetch all pages helper 
+const DROPDOWN_LIMIT = 50;
+
+async function fetchAllPages(fetcher, query = "") {
+  let page = 1;
+  let all = [];
+  while (true) {
+    const list = await fetcher(query, page);
+    all = [...all, ...list];
+    if (list.length < DROPDOWN_LIMIT) break;
+    page++;
+  }
+  return all;
+}
+
+//  School Search Hook 
+function useSchoolSearch() {
+  const [schools, setSchools] = useState([]);
+  const [loadingSchools, setLoadingSchools] = useState(false);
+
+  const searchSchools = useCallback((query = "") => {
+    setLoadingSchools(true);
+    fetchAllPages(
+      (q, page) =>
+        fetchSchools({ page, limit: DROPDOWN_LIMIT, schoolName: q }).then((res) => {
+          const raw = res?.data?.schools || res?.data?.data || res?.data || [];
+          return Array.isArray(raw) ? raw : [];
+        }),
+      query
+    )
+      .then((list) => {
+        setSchools(list.map((s) => ({
+          value: String(s.id),
+          label: s.schoolName || s.name,
+        })));
+      })
+      .catch(() => setSchools([]))
+      .finally(() => setLoadingSchools(false));
+  }, []);
+
+  return { schools, loadingSchools, searchSchools };
+}
+
+//  Student Search Hook 
+function useStudentSearch(schoolId) {
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
+  const searchStudents = useCallback((query = "") => {
+    if (!schoolId) { setStudents([]); return; }
+    setLoadingStudents(true);
+    fetchAllPages(
+      (q, page) =>
+        fetchStudentsForParent({
+          page,
+          limit: DROPDOWN_LIMIT,
+          schoolId,
+          ...(q ? { name: q } : {}),
+        }).then((res) => {
+          const raw =
+            res?.data?.data?.data ||
+            res?.data?.data ||
+            res?.data?.students ||
+            res?.data ||
+            [];
+          const list = Array.isArray(raw) ? raw : [];
+          return list
+            .map((s) => ({
+              id: s?.id ?? s?.studentId ?? s?._id,
+              name: s?.name ?? s?.studentName ?? s?.fullName,
+            }))
+            .filter((s) => s.id && s.name);
+        }),
+      query
+    )
+      .then(setStudents)
+      .catch(() => setStudents([]))
+      .finally(() => setLoadingStudents(false));
+  }, [schoolId]);
+
+  
+  useEffect(() => {
+    if (schoolId) {
+      searchStudents("");
+    } else {
+      setStudents([]);
+    }
+  }, [schoolId]); 
+
+  return { students, loadingStudents, searchStudents };
+}
+
+//  Searchable Select
+function SearchableSelect({
+  value,
+  onChange,
+  onSearch,
+  options = [],
+  placeholder = "Select...",
+  searchPlaceholder = "Search...",
+  disabled = false,
+  loading = false,
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
+
+  const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    if (open) onSearch?.(debouncedQuery);
+  }, [debouncedQuery, open]);
+
+  const handleOpen = () => {
+    if (disabled) return;
+    setOpen(true);
+    setQuery("");
+    onSearch?.("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleSelect = (opt) => {
+    onChange(opt);
+    setOpen(false);
+    setQuery("");
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled || loading}
+        onClick={handleOpen}
+        className={`flex items-center justify-between w-full border rounded-lg px-4 py-2.5 text-sm transition-colors
+          ${disabled || loading
+            ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-200"
+            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 cursor-pointer"}
+          ${open ? "border-[#23616E] ring-1 ring-[#23616E]/20" : ""}`}
+      >
+        <span className={value?.label ? "text-gray-800" : "text-gray-400"}>
+          {loading ? "Loading..." : value?.label || placeholder}
+        </span>
+        {loading
+          ? <Loader2 size={14} className="animate-spin text-gray-400" />
+          : <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        }
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-gray-200 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
+            <Search size={13} className="text-gray-400 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="flex-1 text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <div className="max-h-44 overflow-y-auto py-1">
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#23616E]" />
+              </div>
+            ) : options.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No results found</p>
+            ) : (
+              options.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleSelect(opt)}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors
+                    ${value?.value === opt.value ? "text-[#23616E] font-medium" : "text-gray-700"}`}
+                >
+                  {opt.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+//  Action Menu
 function ActionMenu({ onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -69,6 +274,7 @@ function ActionMenu({ onEdit, onDelete }) {
   );
 }
 
+//  Student Multi-Select
 function StudentMultiSelect({
   label,
   value,
@@ -77,18 +283,37 @@ function StudentMultiSelect({
   loading = false,
   disabled = false,
   placeholder = "Select Students",
+  onSearch, 
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
+  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
 
-  const selectedStudents = options.filter((student) =>
-    value.includes(String(student.id))
-  );
+  const debouncedQuery = useDebounce(query, 400);
 
-  const filteredOptions = options.filter((student) =>
-    (student.name || "").toLowerCase().includes(query.toLowerCase())
+  
+  useEffect(() => {
+    if (open && onSearch) onSearch(debouncedQuery);
+  }, [debouncedQuery, open]);
+
+  
+  const [knownStudents, setKnownStudents] = useState({});
+  useEffect(() => {
+    if (options.length > 0) {
+      setKnownStudents((prev) => {
+        const next = { ...prev };
+        options.forEach((s) => { next[String(s.id)] = s; });
+        return next;
+      });
+    }
+  }, [options]);
+
+  const selectedStudents = value
+    .map((id) => knownStudents[String(id)])
+    .filter(Boolean);
+  const filteredOptions = options.filter((s) =>
+    (s.name || "").toLowerCase().includes(query.toLowerCase())
   );
 
   const toggleStudent = (studentId) => {
@@ -100,6 +325,14 @@ function StudentMultiSelect({
     }
   };
 
+  const handleOpen = () => {
+    if (disabled || loading) return;
+    const next = !open;
+    setOpen(next);
+    setQuery("");
+    if (next && onSearch) onSearch(""); // load initial results when opening
+  };
+
   return (
     <div className="relative" ref={ref}>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -108,7 +341,7 @@ function StudentMultiSelect({
 
       <button
         type="button"
-        onClick={() => !disabled && setOpen((v) => !v)}
+        onClick={handleOpen}
         disabled={disabled}
         className="w-full min-h-[42px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-left bg-white hover:border-gray-400 transition-colors flex items-center justify-between gap-3 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
       >
@@ -122,11 +355,11 @@ function StudentMultiSelect({
         {loading ? (
           <Loader2 size={14} className="animate-spin text-gray-400 shrink-0" />
         ) : (
-          <ChevronDown size={14} className="text-gray-400 shrink-0" />
+          <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
         )}
       </button>
 
-      {open && !loading && !disabled && (
+      {open && !disabled && (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1">
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
@@ -137,13 +370,26 @@ function StudentMultiSelect({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search students..."
-                className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#23616E]/20"
               />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
           </div>
 
           <div className="max-h-52 overflow-y-auto py-1">
-            {filteredOptions.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-[#23616E]" />
+              </div>
+            ) : filteredOptions.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-400 text-center">
                 No students found
               </div>
@@ -193,14 +439,19 @@ function StudentMultiSelect({
   );
 }
 
-function ParentModal({
-  initialData = null,
-  onClose,
-  onSuccess,
-  schools,
-  loadingSchools,
-}) {
+//  Parent Modal 
+function ParentModal({ initialData = null, onClose, onSuccess }) {
   const isEdit = initialData !== null;
+
+  const { schools, loadingSchools, searchSchools } = useSchoolSearch();
+
+  const [selectedSchool, setSelectedSchool] = useState(
+    initialData?.schoolId
+      ? { value: String(initialData.schoolId), label: initialData.schoolName || "" }
+      : null
+  );
+
+  const { students, loadingStudents, searchStudents } = useStudentSearch(selectedSchool?.value);
 
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
@@ -209,101 +460,23 @@ function ParentModal({
     contactEmail: initialData?.contactEmail ?? "",
     password: "",
     confirmPassword: "",
-    schoolId: initialData?.schoolId ? String(initialData.schoolId) : "",
     studentIds: Array.isArray(initialData?.studentIds)
       ? initialData.studentIds.map(String)
       : [],
   });
 
-  const [students, setStudents] = useState([]);
-  const [loadingStudents, setLoadingStudents] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // School searchable dropdown
-  const [schoolOpen, setSchoolOpen] = useState(false);
-  const [schoolQuery, setSchoolQuery] = useState("");
-  const schoolRef = useRef(null);
-  useOutsideClick(schoolRef, () => setSchoolOpen(false));
-
-  const filteredSchools = schools.filter((s) =>
-    (s.name || "").toLowerCase().includes(schoolQuery.toLowerCase())
-  );
-
-  useEffect(() => {
-    if (!form.schoolId) {
-      setStudents([]);
-      setForm((prev) => ({ ...prev, studentIds: [] }));
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadStudents = async () => {
-      try {
-        setLoadingStudents(true);
-
-        const res = await fetchStudentsForParent({
-          schoolId: form.schoolId,
-          page: 1,
-          limit: 100,
-        });
-
-        console.log("schoolId =>", form.schoolId);
-        console.log("students api full response =>", res);
-        console.log("students api data =>", res?.data);
-
-        const raw =
-          res?.data?.data?.data ||
-          res?.data?.data ||
-          res?.data?.students ||
-          res?.data ||
-          [];
-
-        const list = Array.isArray(raw) ? raw : [];
-
-        console.log("students extracted list =>", list);
-
-        const mapped = list
-          .map((s) => ({
-            id: s?.id ?? s?.studentId ?? s?._id,
-            name: s?.name ?? s?.studentName ?? s?.fullName,
-          }))
-          .filter((s) => s.id && s.name);
-
-        console.log("students mapped =>", mapped);
-
-        if (!cancelled) {
-          setStudents(mapped);
-          setForm((prev) => ({
-            ...prev,
-            studentIds: prev.studentIds.filter((id) =>
-              mapped.some((s) => String(s.id) === String(id))
-            ),
-          }));
-        }
-      } catch (err) {
-        console.error("students fetch error =>", err);
-        if (!cancelled) setStudents([]);
-      } finally {
-        if (!cancelled) setLoadingStudents(false);
-      }
-    };
-
-    loadStudents();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [form.schoolId]);
+  const handleSchoolChange = (opt) => {
+    setSelectedSchool(opt);
+    setForm((f) => ({ ...f, studentIds: [] }));
+  };
 
   const set = (key) => (e) =>
-    setForm((f) => ({
-      ...f,
-      [key]: e.target.value,
-    }));
+    setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSubmit = async () => {
     setError("");
@@ -311,7 +484,7 @@ function ParentModal({
     if (!form.name.trim()) return setError("Name is required.");
     if (!form.contactEmail.trim()) return setError("Email is required.");
     if (!form.contactNumber.trim()) return setError("Contact number is required.");
-    if (!form.schoolId) return setError("School is required.");
+    if (!selectedSchool) return setError("School is required.");
 
     if (!isEdit && !form.password) return setError("Password is required.");
     if (!isEdit && form.password !== form.confirmPassword) {
@@ -329,7 +502,7 @@ function ParentModal({
         contactEmail: form.contactEmail.trim(),
         contactNumber: form.contactNumber.trim(),
         countryCode: form.countryCode || "+91",
-        schoolId: form.schoolId ? Number(form.schoolId) : null,
+        schoolId: selectedSchool ? Number(selectedSchool.value) : null,
         studentIds: form.studentIds.map(Number),
       };
 
@@ -478,82 +651,30 @@ function ParentModal({
             </div>
           )}
 
-          {/* School searchable dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               School
             </label>
-            <div className="relative" ref={schoolRef}>
-              <button
-                type="button"
-                onClick={() => { if (!loadingSchools) setSchoolOpen((v) => !v); }}
-                className={`w-full flex items-center justify-between border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-[#23616E] transition-colors
-                  ${loadingSchools ? "opacity-50 cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}
-              >
-                <span className={form.schoolId ? "text-gray-700" : "text-gray-400"}>
-                  {loadingSchools
-                    ? "Loading schools..."
-                    : schools.find((s) => String(s.id) === form.schoolId)?.name || "Select School"}
-                </span>
-                {loadingSchools
-                  ? <Loader2 size={14} className="animate-spin text-gray-400" />
-                  : <ChevronDown size={14} className="text-gray-400" />}
-              </button>
-
-              {schoolOpen && (
-                <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                  <div className="p-2 border-b border-gray-100">
-                    <div className="relative">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        autoFocus
-                        type="text"
-                        value={schoolQuery}
-                        onChange={(e) => setSchoolQuery(e.target.value)}
-                        placeholder="Search school..."
-                        className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                      />
-                    </div>
-                  </div>
-                  <ul className="max-h-44 overflow-y-auto py-1">
-                    {filteredSchools.length === 0 ? (
-                      <li className="px-3 py-2 text-sm text-gray-400 text-center">No results</li>
-                    ) : (
-                      filteredSchools.map((s) => (
-                        <li
-                          key={s.id}
-                          onClick={() => {
-                            setForm((prev) => ({ ...prev, schoolId: String(s.id), studentIds: [] }));
-                            setSchoolOpen(false);
-                            setSchoolQuery("");
-                          }}
-                          className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors ${
-                            String(form.schoolId) === String(s.id)
-                              ? "text-[#23616E] font-medium"
-                              : "text-gray-700"
-                          }`}
-                        >
-                          {s.name}
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <SearchableSelect
+              value={selectedSchool}
+              onChange={handleSchoolChange}
+              onSearch={searchSchools}
+              options={schools}
+              placeholder="Select School"
+              searchPlaceholder="Search school..."
+              loading={loadingSchools}
+            />
           </div>
 
-          {/* StudentMultiSelect */}
           <StudentMultiSelect
             label="Students"
             value={form.studentIds}
             onChange={(ids) => setForm((f) => ({ ...f, studentIds: ids }))}
             options={students}
             loading={loadingStudents}
-            disabled={!form.schoolId}
-            placeholder={
-              form.schoolId ? "Select Students" : "Select school first"
-            }
+            onSearch={searchStudents}
+            disabled={!selectedSchool}
+            placeholder={selectedSchool ? "Select Students" : "Select school first"}
           />
         </div>
 
@@ -575,12 +696,8 @@ function ParentModal({
           >
             {submitting && <Loader2 size={14} className="animate-spin" />}
             {submitting
-              ? isEdit
-                ? "Saving..."
-                : "Adding..."
-              : isEdit
-              ? "Save Changes"
-              : "Add"}
+              ? isEdit ? "Saving..." : "Adding..."
+              : isEdit ? "Save Changes" : "Add"}
           </button>
         </div>
       </div>
@@ -588,6 +705,7 @@ function ParentModal({
   );
 }
 
+//  Delete Dialog 
 function DeleteDialog({ parentName, onConfirm, onCancel, deleting }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -620,7 +738,7 @@ function DeleteDialog({ parentName, onConfirm, onCancel, deleting }) {
   );
 }
 
-// ── Main Page ──
+//  Main Page 
 const ITEMS_PER_PAGE = 10;
 
 export default function ParentsPage() {
@@ -631,10 +749,9 @@ export default function ParentsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
 
-  const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingSchools, setLoadingSchools] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -644,7 +761,10 @@ export default function ParentsPage() {
   const loadParents = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchParents({ page, limit: itemsPerPage });
+      const params = { page, limit: itemsPerPage };
+      if (debouncedSearch.trim()) params.name = debouncedSearch.trim();
+
+      const res = await fetchParents(params);
       const list = Array.isArray(res?.data) ? res.data : [];
       const pagination = res?.pagination || {};
 
@@ -658,27 +778,11 @@ export default function ParentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, itemsPerPage]);
+  }, [page, itemsPerPage, debouncedSearch]);
 
   useEffect(() => {
     loadParents();
   }, [loadParents]);
-
-  useEffect(() => {
-    setLoadingSchools(true);
-    fetchSchools({ page: 1, limit: 50 })
-      .then((res) => {
-        const list = Array.isArray(res?.data) ? res.data : [];
-        setSchools(
-          list.map((s) => ({
-            id: s.id,
-            name: s.schoolName || s.name,
-          }))
-        );
-      })
-      .catch(() => setSchools([]))
-      .finally(() => setLoadingSchools(false));
-  }, []);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -698,13 +802,13 @@ export default function ParentsPage() {
     }
   };
 
-  const displayParents = parents.filter((p) =>
-    (p.name || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
 
   return (
     <div className="ty-page-shell">
-      {/* Modals */}
       {showModal && (
         <ParentModal
           initialData={null}
@@ -713,8 +817,6 @@ export default function ParentsPage() {
             setPage(1);
             loadParents();
           }}
-          schools={schools}
-          loadingSchools={loadingSchools}
         />
       )}
 
@@ -726,8 +828,6 @@ export default function ParentsPage() {
             loadParents();
             setEditData(null);
           }}
-          schools={schools}
-          loadingSchools={loadingSchools}
         />
       )}
 
@@ -746,7 +846,11 @@ export default function ParentsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="ty-page-title">Parents</h1>
-          <p className="mt-1 text-sm text-[#5b626a]">{totalCount} Parents</p>
+          <p className="mt-1 text-sm text-[#5b626a]">
+            {debouncedSearch.trim()
+              ? `${totalCount} result${totalCount !== 1 ? "s" : ""}`
+              : `${totalCount} Parents`}
+          </p>
         </div>
 
         <button
@@ -770,7 +874,7 @@ export default function ParentsPage() {
             type="search"
             placeholder="Search parents by name..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] tracking-[0] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
           />
         </label>
@@ -804,14 +908,14 @@ export default function ParentsPage() {
                     <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
                   </td>
                 </tr>
-              ) : displayParents.length === 0 ? (
+              ) : parents.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-16 text-sm text-[#5b626a]">
                     No parents found.
                   </td>
                 </tr>
               ) : (
-                displayParents.map((p) => (
+                parents.map((p) => (
                   <tr key={p.id} className="border-b border-[#eef0f2] last:border-b-0">
                     <td className="px-4 py-5 text-[15px] font-medium text-[#2a2d32] sm:px-5">{p.name || "-"}</td>
                     <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{p.contactEmail || "-"}</td>
@@ -840,6 +944,7 @@ export default function ParentsPage() {
                             contactNumber: p.contactNumber,
                             countryCode: p.countryCode,
                             schoolId: p.school?.id || p.schoolId || "",
+                            schoolName: p.school?.schoolName || p.school?.name || "",
                             studentIds: Array.isArray(p.students)
                               ? p.students.map((s) => s.id)
                               : Array.isArray(p.studentIds)
