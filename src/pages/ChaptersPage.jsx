@@ -6,14 +6,15 @@ import {
   Copy,
   Eye,
   Loader2,
-  MoreHorizontal,
-  Pencil,
   Plus,
-  Search,
-  Trash2,
   X,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import SearchInput from "../components/ui/SearchInput";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import { extractList, extractPagination } from "../api/normalize";
 import {
   createChapter,
   deleteChapter,
@@ -25,62 +26,6 @@ import {
 
 const PAGE_SIZE = 10;
 
-function extractList(response, keys) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-
-  for (const key of keys) {
-    if (Array.isArray(response?.[key])) return response[key];
-    if (Array.isArray(response?.data?.[key])) return response.data[key];
-  }
-
-  return [];
-}
-
-function extractPagination(response, fallbackCount = 0, fallbackPageSize = PAGE_SIZE) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (totalCount && pageSize ? Math.ceil(totalCount / pageSize) : 1)
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
-
 function safeText(value, fallback = "-") {
   if (value === undefined || value === null || value === "") return fallback;
   return String(value);
@@ -90,102 +35,6 @@ function truncateText(value, maxLength = 28) {
   const text = safeText(value);
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
-}
-
-function useOutsideClick(ref, onOutside) {
-  useEffect(() => {
-    function handleClick(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        onOutside();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onOutside, ref]);
-}
-
-function ActionMenu({ chapterTitle, onView, onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-        aria-label={`Open actions for ${chapterTitle}`}
-      >
-        <MoreHorizontal size={18} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onEdit(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Pencil size={14} className="text-[#155966]" />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onView(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Eye size={14} className="text-[#155966]" />
-            View
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onDelete(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50"
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DeleteChapterModal({ chapterTitle, deleting, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-[22px] bg-white p-7 text-center shadow-2xl">
-        <h2 className="text-lg font-semibold text-[#20242a]">Delete Chapter</h2>
-        <p className="mt-2 text-sm text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{chapterTitle}</span>?
-        </p>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 rounded-xl border border-[#d7dde2] py-2.5 text-sm font-medium text-[#5b626a] transition hover:bg-[#f7fafb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting && <Loader2 size={14} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function mapChapterRow(chapter, index, textbook) {
@@ -887,6 +736,58 @@ export default function ChaptersPage() {
     }
   }
 
+  const columns = [
+    {
+      key: "title",
+      header: "Title",
+      render: (row) => truncateText(row.title, 24),
+    },
+    {
+      key: "subTitle",
+      header: "Sub Title",
+      render: (row) => truncateText(row.subTitle, 26),
+    },
+    {
+      key: "code",
+      header: "Code",
+      render: (row) => truncateText(row.code, 16),
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (row) => truncateText(row.description, 28),
+    },
+    {
+      key: "textbook",
+      header: "Textbook",
+      render: (row) => truncateText(row.textbook, 24),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => row.status,
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      render: (row) => (
+        <ActionMenu
+          label={row.title}
+          onEdit={() => openEditModal(row)}
+          onDelete={() => setDeleteTarget(row)}
+          extraItems={[
+            {
+              label: "View",
+              icon: <Eye size={14} className="text-[#155966]" />,
+              onClick: () => openTopicsPage(row),
+            },
+          ]}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="ty-page-shell">
       <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -921,20 +822,12 @@ export default function ChaptersPage() {
       </div>
 
       <div className="mb-6 rounded-[14px] bg-white px-4 py-4 sm:px-5">
-        <label className="relative block w-full">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search chapters by title..."
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search chapters by title..."
+          className="max-w-full"
+        />
       </div>
 
       <section className="rounded-[14px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
@@ -942,113 +835,37 @@ export default function ChaptersPage() {
           Chapters List
         </h2>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            <Loader2 size={22} className="mx-auto animate-spin text-[#155966]" />
-            <p className="mt-3">Loading chapters...</p>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && rowsToShow.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            No chapters found.
-          </div>
-        )}
+        <DataTable
+          columns={columns}
+          rows={rowsToShow}
+          loading={loading}
+          error={error}
+          emptyLabel="No chapters found."
+          rowKey={(row) => row.id}
+          minWidth={1080}
+        />
 
         {!loading && !error && rowsToShow.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1080px] border-collapse">
-                <thead>
-                  <tr className="border-b border-[#edf0f2]">
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Title
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Sub Title
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Code
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Description
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Textbook
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Status
-                    </th>
-                    <th className="px-3 py-4 text-right ty-table-header">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowsToShow.map((chapter) => (
-                    <tr
-                      key={chapter.id}
-                      className="border-b border-[#eef0f2] last:border-b-0"
-                    >
-                      <td className="px-3 py-4 ty-table-cell-primary">
-                        {truncateText(chapter.title, 24)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(chapter.subTitle, 26)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(chapter.code, 16)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(chapter.description, 28)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(chapter.textbook, 24)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {chapter.status}
-                      </td>
-                      <td className="px-3 py-4 text-right">
-                        <ActionMenu
-                          chapterTitle={chapter.title}
-                          onEdit={() => openEditModal(chapter)}
-                          onView={() => openTopicsPage(chapter)}
-                          onDelete={() => setDeleteTarget(chapter)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <PaginationControls
-              className="mt-6"
-              rowsPerPage={pageSize}
-              rowsPerPageOptions={[10, 20, 50]}
-              onRowsPerPageChange={(nextPageSize) => {
-                setPageSize(nextPageSize);
-                setPage(1);
-              }}
-              rangeLabel={`${startRow}-${endRow} of ${totalChapters}`}
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              hasPrev={pagination.hasPrev}
-              hasNext={pagination.hasNext}
-              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
-              onNext={() =>
-                setPage((value) =>
-                  Math.min(value + 1, pagination.totalPages || value + 1)
-                )
-              }
-            />
-          </>
+          <PaginationControls
+            className="mt-6"
+            rowsPerPage={pageSize}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            rangeLabel={`${startRow}-${endRow} of ${totalChapters}`}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasPrev={pagination.hasPrev}
+            hasNext={pagination.hasNext}
+            onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+            onNext={() =>
+              setPage((value) =>
+                Math.min(value + 1, pagination.totalPages || value + 1)
+              )
+            }
+          />
         )}
       </section>
 
@@ -1074,9 +891,18 @@ export default function ChaptersPage() {
       )}
 
       {deleteTarget && (
-        <DeleteChapterModal
-          chapterTitle={deleteTarget.title}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Delete Chapter"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">{deleteTarget.title}</span>?
+            </>
+          }
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onCancel={() => !deleting && setDeleteTarget(null)}
           onConfirm={handleDeleteChapter}
         />

@@ -7,71 +7,18 @@ import {
   Loader2,
   MoreHorizontal,
   Plus,
-  Search,
   X,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import SearchInput from "../components/ui/SearchInput";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import { extractList, extractPagination } from "../api/normalize";
 import {
   createBoardGrade,
   deleteBoardGrade,
   fetchBoardGrades,
   updateBoardGrade,
 } from "../api/authService";
-
-function extractGrades(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.grades)) return response.grades;
-  if (Array.isArray(response?.data?.grades)) return response.data.grades;
-  if (Array.isArray(response?.data?.data)) return response.data.data;
-  return [];
-}
-
-function extractPagination(response, fallbackCount, fallbackPageSize) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (pagination.totalCount && pagination.pageSize
-          ? Math.ceil(pagination.totalCount / pagination.pageSize)
-          : 1)
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
 
 function mapGradeRow(grade) {
   return {
@@ -385,40 +332,6 @@ function GradeCardMenu({ onDelete, onEdit }) {
   );
 }
 
-function DeleteGradeModal({ gradeName, deleting, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-[22px] bg-white p-7 text-center shadow-2xl">
-        <h2 className="text-lg font-semibold text-[#20242a]">Delete Grade</h2>
-        <p className="mt-2 text-sm text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{gradeName}</span>?
-        </p>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 rounded-xl border border-[#d7dde2] py-2.5 text-sm font-medium text-[#5b626a] transition hover:bg-[#f7fafb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting && <Loader2 size={14} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function GradeCard({ grade, onDelete, onEdit }) {
   return (
     <div className="flex flex-col rounded-2xl bg-white p-5 shadow-[0_2px_12px_rgba(18,53,64,0.07)]">
@@ -501,7 +414,9 @@ export default function BoardGradesPage() {
           setError("");
 
           const response = await fetchBoardGrades(queryParams);
-          const extractedGrades = extractGrades(response).map(mapGradeRow);
+          const extractedGrades = extractList(response, ["grades", "data"]).map(
+            mapGradeRow
+          );
           const extractedPagination = extractPagination(
             response,
             extractedGrades.length,
@@ -609,23 +524,14 @@ export default function BoardGradesPage() {
 
       {/* Search */}
       <div className="mb-6 rounded-[18px] bg-white px-4 py-4 sm:px-5">
-        <label className="relative block w-full max-w-[370px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search grades..."
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          placeholder="Search grades..."
+        />
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
@@ -697,9 +603,21 @@ export default function BoardGradesPage() {
       )}
 
       {deleteTarget && (
-        <DeleteGradeModal
-          gradeName={deleteTarget.name}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Delete Grade"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">
+                {deleteTarget.name}
+              </span>
+              ?
+            </>
+          }
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onCancel={() => !deleting && setDeleteTarget(null)}
           onConfirm={handleDeleteGrade}
         />

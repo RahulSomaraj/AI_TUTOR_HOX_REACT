@@ -1,23 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import PaginationControls from "../components/PaginationControls";
-import {
-  Search, MoreHorizontal, Plus, X, Loader2,
-  ChevronLeft, ChevronRight, Pencil, Trash2, Upload,
-} from "lucide-react";
+import { X, Loader2, Upload } from "lucide-react";
 import {
   fetchBanners, createBanner, updateBanner, deleteBanner, uploadFile,
 } from "../api/authService";
-
-
-function useOutsideClick(ref, cb) {
-  useEffect(() => {
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) cb();
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [cb, ref]);
-}
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 
 // ─── Image Upload Field ────────────────────────────────────────────────────────
 function ImageUploadField({ value, onChange }) {
@@ -242,40 +233,6 @@ function EditBannerModal({ banner, onClose, onSuccess }) {
   );
 }
 
-// ─── Action Menu ───────────────────────────────────────────────────────────────
-function ActionMenu({ onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 transition-colors"
-      >
-        <MoreHorizontal size={16} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-8 z-40 bg-white border border-gray-200 rounded-lg shadow-lg w-36 py-1 text-sm">
-          <button
-            onClick={() => { onEdit(); setOpen(false); }}
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
-          >
-            <Pencil size={13} className="text-[#23616E]" /> Edit
-          </button>
-          <button
-            onClick={() => { onDelete(); setOpen(false); }}
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-50 text-red-500 transition-colors"
-          >
-            <Trash2 size={13} /> Remove
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function BannerPage() {
   const [banners, setBanners]       = useState([]);
@@ -330,6 +287,44 @@ export default function BannerPage() {
   const truncate = (str = "", n = 55) =>
     str.length > n ? str.slice(0, n) + "…" : str;
 
+  const columns = [
+    {
+      key: "title",
+      header: "Title",
+      render: (b) => (
+        <span className="font-medium text-gray-800">{b.title || "-"}</span>
+      ),
+    },
+    {
+      key: "description",
+      header: "Description",
+      render: (b) => (
+        <span className="text-gray-600">{truncate(b.description || "", 60) || "-"}</span>
+      ),
+    },
+    {
+      key: "image",
+      header: "Image",
+      render: (b) => (
+        <span className="text-xs font-mono text-gray-800">
+          {truncate(b.image || "-", 45)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (b) => (
+        <ActionMenu
+          label={b.title || "banner"}
+          onEdit={() => setEditBanner(b)}
+          onDelete={() => setDeleteId(b.id)}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="ty-page-shell flex flex-col">
 
@@ -348,56 +343,32 @@ export default function BannerPage() {
         />
       )}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-            <h3 className="text-base font-bold text-gray-800 mb-2">Remove Banner</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Are you sure you want to remove this banner? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={deleting}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {deleting && <Loader2 size={13} className="animate-spin" />}
-                {deleting ? "Removing..." : "Remove"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Remove Banner"
+          message="Are you sure you want to remove this banner? This action cannot be undone."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
+          onCancel={() => setDeleteId(null)}
+          onConfirm={() => handleDelete(deleteId)}
+        />
       )}
 
       {/* ── Page Header  ── */}
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="ty-page-title">Banner</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
-        >
-          <Plus size={18} />
-          Add Banner
-        </button>
-      </div>
+      <PageHeader
+        title="Banner"
+        actionLabel="Add Banner"
+        onAction={() => setShowAdd(true)}
+      />
 
       {/* ── Search Card ── */}
       <div className="mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-2 w-96 bg-[#F5F6FA]">
-          <Search size={15} className="text-gray-900 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search banner by title..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="bg-transparent text-sm text-gray-600 placeholder-gray-500 outline-none w-full"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={(val) => { setSearch(val); setPage(1); }}
+          placeholder="Search banner by title..."
+        />
       </div>
 
       {/* ── Banner List Card ── */}
@@ -407,59 +378,18 @@ export default function BannerPage() {
           <h2 className="text-lg font-semibold text-gray-800">Banner List</h2>
         </div>
 
-        <div className="overflow-x-auto px-5">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#EEF5F7]">
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 rounded-l-2xl w-1/4">
-                  Title
-                </th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800 w-1/3">
-                  Description
-                </th>
-                <th className="text-left px-6 py-4 text-[15px] font-medium text-gray-800">
-                  Image
-                </th>
-                <th className="px-6 py-4 rounded-r-2xl w-12" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-14">
-                    <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
-                  </td>
-                </tr>
-              ) : banners.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-14 text-gray-400 text-sm">
-                    No banners found.
-                  </td>
-                </tr>
-              ) : (
-                banners.map((b) => (
-                  <tr key={b.id} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="px-6 py-4 text-gray-800 font-medium">{b.title || "-"}</td>
-                    <td className="px-6 py-4 text-gray-600">{truncate(b.description || "", 60) || "-"}</td>
-                    <td className="px-6 py-4 text-gray-500">
-                      <span className="text-xs font-mono text-gray-800">
-                        {truncate(b.image || "-", 45)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <ActionMenu
-                        onEdit={() => setEditBanner(b)}
-                        onDelete={() => setDeleteId(b.id)}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="px-5">
+          <DataTable
+            columns={columns}
+            rows={banners}
+            loading={loading}
+            emptyLabel="No banners found."
+            rowKey={(b) => b.id}
+          />
         </div>
 
         {/* ── Pagination ── */}
+        {banners.length > 0 && !loading && (
 <div className="px-6 py-4 border-t border-gray-100">
   <PaginationControls
     currentPage={page}
@@ -476,6 +406,7 @@ export default function BannerPage() {
     disabled={loading}
   />
 </div>
+        )}
 
       </div>
     </div>

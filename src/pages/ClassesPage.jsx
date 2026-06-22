@@ -1,29 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, MoreHorizontal, ChevronDown, Pencil, Trash2, Plus, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
+import { Search, ChevronDown, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import SearchableSelect from "../components/ui/SearchableSelect";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import useDebounce from "../hooks/useDebounce";
+import useOutsideClick from "../hooks/useOutsideClick";
 import {
   fetchClasses, createClass, deleteClass, updateClass,
-  fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards, 
+  fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards,
 } from "../api/authService";
-
-function useOutsideClick(ref, cb) {
-  useEffect(() => {
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) cb();
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [cb, ref]);
-}
-
-function useDebounce(value, delay = 400) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
 
 const DROPDOWN_LIMIT = 10;
 
@@ -64,110 +53,7 @@ function TooltipButton({ onClick, tooltip, children, className = "" }) {
   );
 }
 
-// Searchable Select Dropdown 
-function SearchableSelect({
-  value,
-  onChange,
-  onSearch,
-  options = [],
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  disabled = false,
-  loading = false,
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
-  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
-
-  const debouncedQuery = useDebounce(query, 400);
-
-  useEffect(() => {
-    if (open) onSearch?.(debouncedQuery);
-  }, [debouncedQuery, open]);
-
-  const handleOpen = () => {
-    if (disabled) return;
-    setOpen(true);
-    setQuery("");
-    onSearch?.("");
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const handleSelect = (opt) => {
-    onChange(opt);
-    setOpen(false);
-    setQuery("");
-  };
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        disabled={disabled || loading}
-        onClick={handleOpen}
-        className={`flex items-center justify-between w-full border rounded-lg px-4 py-2.5 text-sm transition-colors
-          ${disabled || loading
-            ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-200"
-            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 cursor-pointer"}
-          ${open ? "border-[#23616E] ring-1 ring-[#23616E]/20" : ""}`}
-      >
-        <span className={value?.label ? "text-gray-800" : "text-gray-400"}>
-          {loading ? "Loading..." : value?.label || placeholder}
-        </span>
-        {loading
-          ? <Loader2 size={14} className="animate-spin text-gray-400" />
-          : <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-        }
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-gray-200 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-            <Search size={13} className="text-gray-400 shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="flex-1 text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600">
-                <X size={12} />
-              </button>
-            )}
-          </div>
-          <div className="max-h-44 overflow-y-auto py-1">
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 size={16} className="animate-spin text-[#23616E]" />
-              </div>
-            ) : options.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No results found</p>
-            ) : (
-              options.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleSelect(opt)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors
-                    ${value?.value === opt.value ? "text-[#23616E] font-medium" : "text-gray-700"}`}
-                >
-                  {opt.label}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// School Search Hook 
+// School Search Hook
 function useSchoolSearch() {
   const [schools, setSchools] = useState([]);
   const [loadingSchools, setLoadingSchools] = useState(false);
@@ -547,43 +433,7 @@ function EditClassModal({ classData, boardsMap = {}, onClose, onSuccess }) {
   );
 }
 
-// Action Menu
-function ActionMenu({ onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 transition-colors"
-      >
-        <MoreHorizontal size={16} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-8 z-40 bg-white border border-gray-200 rounded-lg shadow-lg w-36 py-1 text-sm">
-          <button
-            onClick={() => { onEdit(); setOpen(false); }}
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
-          >
-            <Pencil size={13} className="text-[#23616E]" />
-            Edit
-          </button>
-          <button
-            onClick={() => { onDelete(); setOpen(false); }}
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-50 text-red-500 transition-colors"
-          >
-            <Trash2 size={13} />
-            Remove
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// School Filter Dropdown 
+// School Filter Dropdown
 function SchoolFilter({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -729,12 +579,68 @@ export default function ClassesPage() {
     }
   };
 
-  const handleSearchChange = (e) => { setSearch(e.target.value); setPage(1); };
+  const handleSearchChange = (value) => { setSearch(value); setPage(1); };
   const handleSchoolFilter = (id) => { setFilterSchoolId(id); setPage(1); };
   const handleItemsPerPageChange = (val) => { setItemsPerPage(val); setPage(1); };
 
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * itemsPerPage + 1;
   const rangeEnd = Math.min(page * itemsPerPage, totalCount);
+
+  const columns = [
+    {
+      key: "class",
+      header: "Class",
+      render: (c) => c.aliasName || c.name || c.className || "-",
+    },
+    {
+      key: "division",
+      header: "Division",
+      render: (c) =>
+        c.division || (c.aliasName?.includes("-") ? c.aliasName.split("-").pop() : "-"),
+    },
+    {
+      key: "school",
+      header: "School",
+      render: (c) => c.school?.schoolName || c.school?.name || c.schoolName || "-",
+    },
+    {
+      key: "board",
+      header: "Board",
+      render: (c) => boardsMap[c.boardId] || c.board?.name || c.boardName || "-",
+    },
+    {
+      key: "students",
+      header: "Students",
+      render: (c) =>
+        c.noOfStudents ??
+        c._count?.students ??
+        c.studentCount ??
+        studentCounts[c.id] ??
+        0,
+    },
+    {
+      key: "teacher",
+      header: "Teacher",
+      render: (c) =>
+        c.teacher
+          ? c.teacher.name ||
+            `${c.teacher.firstName || ""} ${c.teacher.lastName || ""}`.trim() ||
+            "-"
+          : c.teacherName || "-",
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (c) => (
+        <ActionMenu
+          label="class"
+          onEdit={() => setEditClass(c)}
+          onDelete={() => setDeleteId(c.id)}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="ty-page-shell flex flex-col">
@@ -756,54 +662,31 @@ export default function ClassesPage() {
       )}
 
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-            <h3 className="text-base font-bold text-gray-800 mb-2">Remove Class</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Are you sure you want to remove this class? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={deleting}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {deleting && <Loader2 size={13} className="animate-spin" />}
-                {deleting ? "Removing..." : "Remove"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Remove Class"
+          message="Are you sure you want to remove this class? This action cannot be undone."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
+          onCancel={() => setDeleteId(null)}
+          onConfirm={() => handleDelete(deleteId)}
+        />
       )}
 
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="ty-page-title">Classes</h1>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-[17px] font-semibold tracking-[0] px-6 py-3 rounded-xl transition-colors"
-        >
-          <Plus size={18} />
-          Add Class
-        </button>
-      </div>
+      <PageHeader
+        title="Classes"
+        actionLabel="Add Class"
+        onAction={() => setShowAddModal(true)}
+      />
 
       <div className="mb-4 bg-white rounded-2xl border border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 border border-gray-300 rounded-full px-4 py-2 w-96 bg-[#F5F6FA]">
-          <Search size={15} className="text-gray-900 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search by teacher or class name..."
-            value={search}
-            onChange={handleSearchChange}
-            className="bg-transparent text-sm text-gray-600 placeholder-gray-800 outline-none w-full"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={handleSearchChange}
+          placeholder="Search by teacher or class name..."
+          className="w-96"
+        />
         <SchoolFilter value={filterSchoolId} onChange={handleSchoolFilter} />
       </div>
 
@@ -812,66 +695,14 @@ export default function ClassesPage() {
           <h2 className="ty-section-heading">Classes</h2>
         </div>
 
-        <div className="overflow-x-auto px-5">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#EEF5F7]">
-                <th className="text-left px-6 py-4 ty-table-header rounded-l-2xl">Class</th>
-                <th className="text-left px-6 py-4 ty-table-header">Division</th>
-                <th className="text-left px-6 py-4 ty-table-header">School</th>
-                <th className="text-left px-6 py-4 ty-table-header">Board</th>
-                <th className="text-left px-6 py-4 ty-table-header">Students</th>
-                <th className="text-left px-6 py-4 ty-table-header">Teacher</th>
-                <th className="px-6 py-4 rounded-r-2xl" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-14">
-                    <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
-                  </td>
-                </tr>
-              ) : classes.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-14 text-gray-400 text-sm">
-                    No classes found.
-                  </td>
-                </tr>
-              ) : (
-                classes.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="px-6 py-4 ty-table-cell-primary">
-                      {c.aliasName || c.name || c.className || "-"}
-                    </td>
-                    <td className="px-6 py-4 ty-table-cell">
-                      {c.division || (c.aliasName?.includes("-") ? c.aliasName.split("-").pop() : "-")}
-                    </td>
-                    <td className="px-6 py-4 ty-table-cell">{c.school?.schoolName || c.school?.name || c.schoolName || "-"}</td>
-                    <td className="px-6 py-4 ty-table-cell">{boardsMap[c.boardId] || c.board?.name || c.boardName || "-"}</td>
-                    <td className="px-6 py-4 ty-table-cell">
-                      {c.noOfStudents ??
-                         c._count?.students ??
-                         c.studentCount ??
-                         studentCounts[c.id] ??
-                      0}
-                   </td>
-                    <td className="px-6 py-4 ty-table-cell">
-                      {c.teacher
-                        ? (c.teacher.name || `${c.teacher.firstName || ""} ${c.teacher.lastName || ""}`.trim() || "-")
-                        : (c.teacherName || "-")}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <ActionMenu
-                        onEdit={() => setEditClass(c)}
-                        onDelete={() => setDeleteId(c.id)}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="px-5">
+          <DataTable
+            columns={columns}
+            rows={classes}
+            loading={loading}
+            emptyLabel="No classes found."
+            rowKey={(row) => row.id}
+          />
         </div>
 
         {!loading && totalCount > 0 && (

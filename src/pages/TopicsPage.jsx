@@ -5,16 +5,17 @@ import {
   ChevronDown,
   Eye,
   Loader2,
-  MoreHorizontal,
-  Pencil,
   PlayCircle,
   Plus,
-  Search,
-  Trash2,
   Upload,
   X,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import SearchInput from "../components/ui/SearchInput";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import { extractList, extractPagination } from "../api/normalize";
 import {
   createTopic,
   deleteTopic,
@@ -24,62 +25,6 @@ import {
 } from "../api/authService";
 
 const PAGE_SIZE = 10;
-
-function extractList(response, keys) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-
-  for (const key of keys) {
-    if (Array.isArray(response?.[key])) return response[key];
-    if (Array.isArray(response?.data?.[key])) return response.data[key];
-  }
-
-  return [];
-}
-
-function extractPagination(response, fallbackCount = 0, fallbackPageSize = PAGE_SIZE) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (totalCount && pageSize ? Math.ceil(totalCount / pageSize) : 1)
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
 
 function safeText(value, fallback = "-") {
   if (value === undefined || value === null || value === "") return fallback;
@@ -115,101 +60,6 @@ function mapTopicRow(topic, index, chapter) {
     isActive: topic?.isActive ?? true,
     concept: topic?.concept ?? "",
   };
-}
-
-function useOutsideClick(ref, onOutside) {
-  useEffect(() => {
-    function handleClick(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        onOutside();
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onOutside, ref]);
-}
-
-function ActionMenu({ topicTitle, onEdit, onView, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-        aria-label={`Open actions for ${topicTitle}`}
-      >
-        <MoreHorizontal size={18} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onEdit(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Pencil size={14} className="text-[#155966]" />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onView(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Eye size={14} className="text-[#155966]" />
-            View
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onDelete(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50"
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DeleteTopicModal({ topicTitle, deleting, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-[22px] bg-white p-7 text-center shadow-2xl">
-        <h2 className="text-lg font-semibold text-[#20242a]">Delete Topic</h2>
-        <p className="mt-2 text-sm text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{topicTitle}</span>?
-        </p>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 rounded-xl border border-[#d7dde2] py-2.5 text-sm font-medium text-[#5b626a] transition hover:bg-[#f7fafb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting && <Loader2 size={14} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function TopicEditModal({ topic, onClose, onSuccess }) {
@@ -1042,20 +892,11 @@ export default function TopicsPage() {
       </div>
 
       <div className="mb-6 rounded-[14px] bg-white px-4 py-4 sm:px-5">
-        <label className="relative block w-full max-w-[368px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={19}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            className="h-[38px] w-full rounded-[18px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search"
+        />
       </div>
 
       <section className="rounded-[14px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
@@ -1063,91 +904,67 @@ export default function TopicsPage() {
           Topics List
         </h2>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            <Loader2 size={22} className="mx-auto animate-spin text-[#155966]" />
-            <p className="mt-3">Loading topics...</p>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && rowsToShow.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            No topics found.
-          </div>
-        )}
+        <DataTable
+          minWidth={980}
+          rowKey={(topic) => topic.id}
+          columns={[
+            {
+              key: "title",
+              header: "Title",
+              render: (topic) => truncateText(topic.title, 24),
+            },
+            {
+              key: "description",
+              header: "Description",
+              render: (topic) => truncateText(topic.description, 34),
+            },
+            {
+              key: "chapter",
+              header: "Chapter",
+              render: (topic) => truncateText(topic.chapter, 24),
+            },
+            {
+              key: "status",
+              header: "Status",
+              render: (topic) => topic.status,
+            },
+            {
+              key: "imageUrl",
+              header: "Image URL",
+              render: (topic) => truncateText(topic.imageUrl, 28),
+            },
+            {
+              key: "action",
+              header: "Action",
+              align: "right",
+              render: (topic) => (
+                <ActionMenu
+                  label={topic.title}
+                  onEdit={() => setActiveTopic(topic)}
+                  extraItems={[
+                    {
+                      label: "View",
+                      icon: <Eye size={14} className="text-[#155966]" />,
+                      onClick: () =>
+                        navigate(
+                          `/syllabus/${textbookId}/chapters/${chapterId}/topics/${topic.id}`,
+                          { state: { topic, chapter, textbook: location.state?.textbook } }
+                        ),
+                    },
+                  ]}
+                  onDelete={() => setDeleteTarget(topic)}
+                />
+              ),
+            },
+          ]}
+          rows={rowsToShow}
+          loading={loading}
+          error={error}
+          emptyLabel="No topics found."
+        />
 
         {!loading && !error && rowsToShow.length > 0 && (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] border-collapse">
-                <thead>
-                  <tr className="border-b border-[#edf0f2]">
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Title
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Description
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Chapter
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Status
-                    </th>
-                    <th className="px-3 py-4 text-left ty-table-header">
-                      Image URL
-                    </th>
-                    <th className="px-3 py-4 text-right ty-table-header">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowsToShow.map((topic) => (
-                    <tr
-                      key={topic.id}
-                      className="border-b border-[#eef0f2] last:border-b-0"
-                    >
-                      <td className="px-3 py-4 ty-table-cell-primary">
-                        {truncateText(topic.title, 24)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(topic.description, 34)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(topic.chapter, 24)}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {topic.status}
-                      </td>
-                      <td className="px-3 py-4 ty-table-cell">
-                        {truncateText(topic.imageUrl, 28)}
-                      </td>
-                      <td className="px-3 py-4 text-right">
-                        <ActionMenu
-                          topicTitle={topic.title}
-                          onEdit={() => setActiveTopic(topic)}
-                          onView={() =>
-                            navigate(
-                              `/syllabus/${textbookId}/chapters/${chapterId}/topics/${topic.id}`,
-                              { state: { topic, chapter, textbook: location.state?.textbook } }
-                            )
-                          }
-                          onDelete={() => setDeleteTarget(topic)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
             <PaginationControls
               className="mt-6"
               rowsPerPage={pageSize}
@@ -1193,9 +1010,21 @@ export default function TopicsPage() {
       )}
 
       {deleteTarget && (
-        <DeleteTopicModal
-          topicTitle={deleteTarget.title}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Delete Topic"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">
+                {deleteTarget.title}
+              </span>
+              ?
+            </>
+          }
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onCancel={() => !deleting && setDeleteTarget(null)}
           onConfirm={handleDeleteTopic}
         />

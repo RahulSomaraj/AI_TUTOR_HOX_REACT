@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Plus, MoreHorizontal, ChevronDown, Pencil, Trash2, Loader2, X, Eye, EyeOff } from "lucide-react";
+import { Search, ChevronDown, Trash2, Loader2, X, Eye, EyeOff } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import SearchableSelect from "../components/ui/SearchableSelect";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import useDebounce from "../hooks/useDebounce";
+import useOutsideClick from "../hooks/useOutsideClick";
 import {
   fetchParents,
   createParent,
@@ -11,26 +19,7 @@ import {
   fetchStudentsForParent,
 } from "../api/authService";
 
-function useOutsideClick(ref, cb) {
-  useEffect(() => {
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) cb();
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [ref, cb]);
-}
-
-function useDebounce(value, delay = 400) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
-
-//  Fetch all pages helper 
+//  Fetch all pages helper
 const DROPDOWN_LIMIT = 50;
 
 async function fetchAllPages(fetcher, query = "") {
@@ -120,158 +109,6 @@ function useStudentSearch(schoolId) {
   }, [schoolId]); 
 
   return { students, loadingStudents, searchStudents };
-}
-
-//  Searchable Select
-function SearchableSelect({
-  value,
-  onChange,
-  onSearch,
-  options = [],
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  disabled = false,
-  loading = false,
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
-  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
-
-  const debouncedQuery = useDebounce(query, 400);
-
-  useEffect(() => {
-    if (open) onSearch?.(debouncedQuery);
-  }, [debouncedQuery, open]);
-
-  const handleOpen = () => {
-    if (disabled) return;
-    setOpen(true);
-    setQuery("");
-    onSearch?.("");
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const handleSelect = (opt) => {
-    onChange(opt);
-    setOpen(false);
-    setQuery("");
-  };
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        disabled={disabled || loading}
-        onClick={handleOpen}
-        className={`flex items-center justify-between w-full border rounded-lg px-4 py-2.5 text-sm transition-colors
-          ${disabled || loading
-            ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-200"
-            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 cursor-pointer"}
-          ${open ? "border-[#23616E] ring-1 ring-[#23616E]/20" : ""}`}
-      >
-        <span className={value?.label ? "text-gray-800" : "text-gray-400"}>
-          {loading ? "Loading..." : value?.label || placeholder}
-        </span>
-        {loading
-          ? <Loader2 size={14} className="animate-spin text-gray-400" />
-          : <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-        }
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-gray-200 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-            <Search size={13} className="text-gray-400 shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="flex-1 text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600">
-                <X size={12} />
-              </button>
-            )}
-          </div>
-          <div className="max-h-44 overflow-y-auto py-1">
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 size={16} className="animate-spin text-[#23616E]" />
-              </div>
-            ) : options.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No results found</p>
-            ) : (
-              options.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleSelect(opt)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors
-                    ${value?.value === opt.value ? "text-[#23616E] font-medium" : "text-gray-700"}`}
-                >
-                  {opt.label}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-//  Action Menu
-function ActionMenu({ onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 transition-colors"
-      >
-        <MoreHorizontal size={16} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-8 z-40 bg-white border border-gray-200 rounded-lg shadow-lg w-36 py-1 text-sm">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-              setOpen(false);
-            }}
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
-          >
-            <Pencil size={13} className="text-[#23616E]" />
-            Edit
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-              setOpen(false);
-            }}
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-50 text-red-500 transition-colors"
-          >
-            <Trash2 size={13} />
-            Remove
-          </button>
-        </div>
-      )}
-    </div>
-  );
 }
 
 //  Student Multi-Select
@@ -705,40 +542,7 @@ function ParentModal({ initialData = null, onClose, onSuccess }) {
   );
 }
 
-//  Delete Dialog 
-function DeleteDialog({ parentName, onConfirm, onCancel, deleting }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-base font-bold text-gray-800 mb-2">Remove Parent</h3>
-        <p className="text-sm text-gray-500 mb-6">
-          Are you sure you want to remove{" "}
-          <span className="font-semibold text-gray-700">{parentName}</span>? This
-          action cannot be undone.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={deleting}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            {deleting && <Loader2 size={13} className="animate-spin" />}
-            {deleting ? "Removing..." : "Remove"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-//  Main Page 
+//  Main Page
 const ITEMS_PER_PAGE = 10;
 
 export default function ParentsPage() {
@@ -802,11 +606,6 @@ export default function ParentsPage() {
     }
   };
 
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPage(1);
-  };
-
   return (
     <div className="ty-page-shell">
       {showModal && (
@@ -832,9 +631,19 @@ export default function ParentsPage() {
       )}
 
       {deleteTarget && (
-        <DeleteDialog
-          parentName={deleteTarget.name}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Remove Parent"
+          message={
+            <>
+              Are you sure you want to remove{" "}
+              <span className="font-semibold text-gray-700">{deleteTarget.name}</span>? This
+              action cannot be undone.
+            </>
+          }
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onConfirm={handleDelete}
           onCancel={() => {
             if (!deleting) setDeleteTarget(null);
@@ -843,41 +652,27 @@ export default function ParentsPage() {
       )}
 
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="ty-page-title">Parents</h1>
-          <p className="mt-1 text-sm text-[#5b626a]">
-            {debouncedSearch.trim()
-              ? `${totalCount} result${totalCount !== 1 ? "s" : ""}`
-              : `${totalCount} Parents`}
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
-        >
-          <Plus size={18} />
-          Add Parent
-        </button>
-      </div>
+      <PageHeader
+        title="Parents"
+        subtitle={
+          debouncedSearch.trim()
+            ? `${totalCount} result${totalCount !== 1 ? "s" : ""}`
+            : `${totalCount} Parents`
+        }
+        actionLabel="Add Parent"
+        onAction={() => setShowModal(true)}
+      />
 
       {/* Search card */}
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center">
-        <label className="relative block w-full max-w-[370px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            placeholder="Search parents by name..."
-            value={search}
-            onChange={handleSearchChange}
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] tracking-[0] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={(next) => {
+            setSearch(next);
+            setPage(1);
+          }}
+          placeholder="Search parents by name..."
+        />
       </div>
 
       {/* Parents list card */}
@@ -886,84 +681,85 @@ export default function ParentsPage() {
           Parents
         </h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-sm">
-            <thead>
-              <tr className="bg-[#e9f2f5]">
-                <th className="rounded-l-2xl px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Name</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Email</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Contact</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">School</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Students</th>
-                <th className="rounded-r-2xl px-4 py-4 sm:px-5">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-16">
-                    <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
-                  </td>
-                </tr>
-              ) : parents.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-16 text-sm text-[#5b626a]">
-                    No parents found.
-                  </td>
-                </tr>
-              ) : (
-                parents.map((p) => (
-                  <tr key={p.id} className="border-b border-[#eef0f2] last:border-b-0">
-                    <td className="px-4 py-5 text-[15px] font-medium text-[#2a2d32] sm:px-5">{p.name || "-"}</td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{p.contactEmail || "-"}</td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                      {p.contactNumber
-                        ? p.contactNumber.startsWith("+")
-                          ? p.contactNumber
-                          : `${p.countryCode || "+91"}-${p.contactNumber}`
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                      {p.school?.schoolName || p.school?.name || "-"}
-                    </td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                      {Array.isArray(p.students) && p.students.length > 0
-                        ? p.students.map((s) => s.name).filter(Boolean).join(", ")
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-5 text-right sm:px-5">
-                      <ActionMenu
-                        onEdit={() =>
-                          setEditData({
-                            id: p.id,
-                            name: p.name,
-                            contactEmail: p.contactEmail,
-                            contactNumber: p.contactNumber,
-                            countryCode: p.countryCode,
-                            schoolId: p.school?.id || p.schoolId || "",
-                            schoolName: p.school?.schoolName || p.school?.name || "",
-                            studentIds: Array.isArray(p.students)
-                              ? p.students.map((s) => s.id)
-                              : Array.isArray(p.studentIds)
-                              ? p.studentIds
-                              : [],
-                          })
-                        }
-                        onDelete={() => setDeleteTarget({ id: p.id, name: p.name })}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          minWidth={960}
+          loading={loading}
+          rows={parents}
+          rowKey={(p) => p.id}
+          emptyLabel="No parents found."
+          columns={[
+            {
+              key: "name",
+              header: "Name",
+              render: (p) => p.name || "-",
+            },
+            {
+              key: "contactEmail",
+              header: "Email",
+              render: (p) => p.contactEmail || "-",
+            },
+            {
+              key: "contact",
+              header: "Contact",
+              render: (p) =>
+                p.contactNumber
+                  ? p.contactNumber.startsWith("+")
+                    ? p.contactNumber
+                    : `${p.countryCode || "+91"}-${p.contactNumber}`
+                  : "-",
+            },
+            {
+              key: "school",
+              header: "School",
+              render: (p) => p.school?.schoolName || p.school?.name || "-",
+            },
+            {
+              key: "students",
+              header: "Students",
+              render: (p) =>
+                Array.isArray(p.students) && p.students.length > 0
+                  ? p.students.map((s) => s.name).filter(Boolean).join(", ")
+                  : "-",
+            },
+            {
+              key: "actions",
+              header: <span className="sr-only">Actions</span>,
+              align: "right",
+              render: (p) => (
+                <ActionMenu
+                  label={p.name}
+                  onEdit={() =>
+                    setEditData({
+                      id: p.id,
+                      name: p.name,
+                      contactEmail: p.contactEmail,
+                      contactNumber: p.contactNumber,
+                      countryCode: p.countryCode,
+                      schoolId: p.school?.id || p.schoolId || "",
+                      schoolName: p.school?.schoolName || p.school?.name || "",
+                      studentIds: Array.isArray(p.students)
+                        ? p.students.map((s) => s.id)
+                        : Array.isArray(p.studentIds)
+                        ? p.studentIds
+                        : [],
+                    })
+                  }
+                  extraItems={[
+                    {
+                      label: "Remove",
+                      icon: <Trash2 size={14} />,
+                      danger: true,
+                      onClick: () => setDeleteTarget({ id: p.id, name: p.name }),
+                    },
+                  ]}
+                />
+              ),
+            },
+          ]}
+        />
 
         {/* Pagination */}
-        {!loading && totalPages > 0 && (
+        {!loading && parents.length > 0 && totalPages > 0 && (
           <PaginationControls
             className="border-t border-gray-100 px-6 py-4"
             rowsPerPage={itemsPerPage}

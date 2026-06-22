@@ -1,34 +1,21 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
-  AlertTriangle, ChevronDown, Loader2, MoreHorizontal, Pencil,
-  Plus, Search, Trash2, X, Eye, EyeOff,
+  ChevronDown, Loader2, Search, X, Eye, EyeOff,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import SearchableSelect from "../components/ui/SearchableSelect";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import useOutsideClick from "../hooks/useOutsideClick";
+import useDebounce from "../hooks/useDebounce";
+import { extractList, extractPagination, safeId } from "../api/normalize";
 import {
   fetchAdminUsers, fetchSchools, createTeacher, updateTeacher, deleteTeacher,
 } from "../api/authService";
-
-
-
-function useOutsideClick(ref, cb) {
-  useEffect(() => {
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) cb();
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [cb, ref]);
-}
-
-function useDebounce(value, delay = 400) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
 
 const DROPDOWN_LIMIT = 10;
 
@@ -44,7 +31,7 @@ async function fetchAllPages(fetcher, query = "") {
   return all;
 }
 
-//  School Search Hook 
+//  School Search Hook
 function useSchoolSearch() {
   const [schools, setSchools] = useState([]);
   const [loadingSchools, setLoadingSchools] = useState(false);
@@ -74,7 +61,7 @@ function useSchoolSearch() {
   return { schools, loadingSchools, searchSchools };
 }
 
-//  School Filter Hook 
+//  School Filter Hook
 function useFilterSchoolSearch() {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -104,110 +91,7 @@ function useFilterSchoolSearch() {
   return { schools, loading, search };
 }
 
-//  SearchableSelect 
-function SearchableSelect({
-  value,
-  onChange,
-  onSearch,
-  options = [],
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  disabled = false,
-  loading = false,
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
-  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
-
-  const debouncedQuery = useDebounce(query, 400);
-
-  useEffect(() => {
-    if (open) onSearch?.(debouncedQuery);
-  }, [debouncedQuery, open]);
-
-  const handleOpen = () => {
-    if (disabled) return;
-    setOpen(true);
-    setQuery("");
-    onSearch?.("");
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const handleSelect = (opt) => {
-    onChange(opt);
-    setOpen(false);
-    setQuery("");
-  };
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        disabled={disabled || loading}
-        onClick={handleOpen}
-        className={`h-[48px] w-full flex items-center justify-between rounded-[10px] border bg-white px-4 text-[14px] outline-none transition
-          ${disabled || loading ? "bg-[#f8fafb] text-[#6b7280] cursor-not-allowed border-[#c7cbd1]" : "text-[#20242a] border-[#c7cbd1] cursor-pointer"}
-          ${open ? "border-[#155966] ring-2 ring-[#155966]/15" : ""}`}
-      >
-        <span className={value?.label ? "text-[#20242a]" : "text-[#6b7280]"}>
-          {loading ? "Loading..." : value?.label || placeholder}
-        </span>
-        {loading
-          ? <Loader2 size={14} className="animate-spin text-[#6b7280] flex-shrink-0" />
-          : <ChevronDown size={16} className={`text-[#5b626a] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-        }
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="w-full pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="max-h-48 overflow-y-auto py-1">
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 size={16} className="animate-spin text-[#155966]" />
-              </div>
-            ) : options.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No results found</p>
-            ) : (
-              options.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleSelect(opt)}
-                  className={`w-full text-left px-4 py-2.5 text-[14px] hover:bg-[#f5fafc] transition-colors
-                    ${value?.value === opt.value ? "text-[#155966] font-medium" : "text-[#20242a]"}`}
-                >
-                  {opt.label}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-//  School Filter Dropdown 
+//  School Filter Dropdown
 function SchoolFilter({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -297,65 +181,7 @@ function SchoolFilter({ value, onChange }) {
 }
 
 function extractTeachers(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.users)) return response.users;
-  if (Array.isArray(response?.admins)) return response.admins;
-  if (Array.isArray(response?.data?.users)) return response.data.users;
-  if (Array.isArray(response?.data?.admins)) return response.data.admins;
-  if (Array.isArray(response?.data?.data)) return response.data.data;
-  return [];
-}
-
-function extractPagination(response, fallbackCount, fallbackPageSize) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (pagination.totalCount && pagination.pageSize
-          ? Math.ceil(pagination.totalCount / pagination.pageSize)
-          : 1)
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
-
-function safeId(value) {
-  if (value === undefined || value === null) return "";
-  return String(value);
+  return extractList(response, ["users", "admins", "data"]);
 }
 
 function getSchoolNameFromTeacher(teacher) {
@@ -390,57 +216,7 @@ function mapTeacherRow(teacher) {
   };
 }
 
-//  ActionMenu 
-function ActionMenu({ teacherName, onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-        aria-label={`Open actions for ${teacherName}`}
-      >
-        <MoreHorizontal size={20} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onEdit(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Pencil size={14} className="text-[#155966]" />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onDelete(); }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#d14343] transition hover:bg-[#fff5f5]"
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-//  TeacherModal 
+//  TeacherModal
 function TeacherModal({ initialData = null, onClose, onSubmit }) {
   const isEdit = Boolean(initialData);
 
@@ -686,44 +462,7 @@ function TeacherModal({ initialData = null, onClose, onSubmit }) {
   );
 }
 
-//  DeleteTeacherModal
-function DeleteTeacherModal({ teacherName, deleting, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-[22px] bg-white p-7 text-center shadow-2xl">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-          <AlertTriangle size={22} className="text-red-500" />
-        </div>
-        <h2 className="text-lg font-semibold text-[#20242a]">Delete Teacher</h2>
-        <p className="mt-2 text-sm text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{teacherName}</span>?
-        </p>
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 rounded-xl border border-[#d7dde2] py-2.5 text-sm font-medium text-[#5b626a] transition hover:bg-[#f7fafb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting && <Loader2 size={14} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── TeachersPage  
+// ── TeachersPage
 export default function TeachersPage() {
   const [teachers, setTeachers] = useState([]);
   const [pagination, setPagination] = useState({
@@ -870,37 +609,48 @@ export default function TeachersPage() {
   const startRow = totalTeachers === 0 ? 0 : (page - 1) * limit + 1;
   const endRow = Math.min(page * limit, totalTeachers);
 
+  const columns = [
+    {
+      key: "name",
+      header: "Name",
+      render: (row) => (
+        <span className="font-medium text-[#2a2d32]">{row.name}</span>
+      ),
+    },
+    { key: "email", header: "Email" },
+    { key: "contact", header: "Contact" },
+    { key: "school", header: "School" },
+    {
+      key: "actions",
+      header: <span className="sr-only">Actions</span>,
+      align: "right",
+      render: (row) => (
+        <ActionMenu
+          label={row.name}
+          onEdit={() => openEditModal(row)}
+          onDelete={() => setDeleteTarget(row)}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="ty-page-shell">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="ty-page-title">Teachers</h1>
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
-        >
-          <Plus size={18} />Add Teacher
-        </button>
-      </div>
+      <PageHeader
+        title="Teachers"
+        actionLabel="Add Teacher"
+        onAction={openAddModal}
+      />
 
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative block w-full max-w-[370px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search teachers by name..."
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] tracking-[0] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          placeholder="Search teachers by name..."
+        />
 
         {/* API-based school filter dropdown */}
         <SchoolFilter
@@ -917,80 +667,37 @@ export default function TeachersPage() {
           Teachers
         </h2>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            Loading teachers...
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && teachers.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            No teachers found.
-          </div>
-        )}
+        <DataTable
+          columns={columns}
+          rows={teachers}
+          loading={loading}
+          error={error}
+          emptyLabel="No teachers found."
+          rowKey={(row) => row.id}
+          minWidth={960}
+        />
 
         {!loading && !error && teachers.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] border-collapse">
-                <thead>
-                  <tr className="bg-[#e9f2f5]">
-                    <th className="rounded-l-2xl px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Name</th>
-                    <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Email</th>
-                    <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Contact</th>
-                    <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">School</th>
-                    <th className="rounded-r-2xl px-4 py-4 text-right text-[16px] font-medium text-[#16191d] sm:px-5">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teachers.map((teacher) => (
-                    <tr key={teacher.id} className="border-b border-[#eef0f2] last:border-b-0">
-                      <td className="px-4 py-5 text-[15px] font-medium text-[#2a2d32] sm:px-5">{teacher.name}</td>
-                      <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{teacher.email}</td>
-                      <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{teacher.contact}</td>
-                      <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{teacher.school}</td>
-                      <td className="px-4 py-5 text-right sm:px-5">
-                        <ActionMenu
-                          teacherName={teacher.name}
-                          onEdit={() => openEditModal(teacher)}
-                          onDelete={() => setDeleteTarget(teacher)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <PaginationControls
-              className="mt-6"
-              rowsPerPage={limit}
-              rowsPerPageOptions={[10, 20, 50]}
-              onRowsPerPageChange={(nextLimit) => {
-                setLimit(nextLimit);
-                setPage(1);
-              }}
-              rangeLabel={`${startRow}-${endRow} of ${totalTeachers}`}
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              hasPrev={pagination.hasPrev}
-              hasNext={pagination.hasNext}
-              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
-              onNext={() =>
-                setPage((value) =>
-                  Math.min(value + 1, pagination.totalPages || value + 1)
-                )
-              }
-            />
-          </>
+          <PaginationControls
+            className="mt-6"
+            rowsPerPage={limit}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setPage(1);
+            }}
+            rangeLabel={`${startRow}-${endRow} of ${totalTeachers}`}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasPrev={pagination.hasPrev}
+            hasNext={pagination.hasNext}
+            onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+            onNext={() =>
+              setPage((value) =>
+                Math.min(value + 1, pagination.totalPages || value + 1)
+              )
+            }
+          />
         )}
       </section>
 
@@ -1010,9 +717,18 @@ export default function TeachersPage() {
       )}
 
       {deleteTarget && (
-        <DeleteTeacherModal
-          teacherName={deleteTarget.name}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Delete Teacher"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">{deleteTarget.name}</span>?
+            </>
+          }
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onCancel={() => { if (!deleting) setDeleteTarget(null); }}
           onConfirm={handleDeleteTeacher}
         />

@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChevronDown,
-  ImageIcon,
-  ImageOff,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ChevronDown, ImageIcon, ImageOff, Loader2, X } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import SearchableSelect from "../components/ui/SearchableSelect";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import { extractList, extractPagination, safeId } from "../api/normalize";
 import {
   createSchool,
   deleteSchool,
@@ -24,74 +20,11 @@ import {
 const PAGE_SIZE = 10;
 
 function extractSchools(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.schools)) return response.schools;
-  if (Array.isArray(response?.data?.schools)) return response.data.schools;
-  return [];
+  return extractList(response, ["schools"]);
 }
 
 function extractBoards(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.boards)) return response.boards;
-  if (Array.isArray(response?.educationBoards)) return response.educationBoards;
-  if (Array.isArray(response?.data?.boards)) return response.data.boards;
-  if (Array.isArray(response?.data?.educationBoards)) {
-    return response.data.educationBoards;
-  }
-  return [];
-}
-
-function extractPagination(response, fallbackCount = 0, fallbackPageSize = PAGE_SIZE) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (pagination.totalCount && pagination.pageSize
-          ? Math.ceil(pagination.totalCount / pagination.pageSize)
-          : 1)
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
-
-function safeId(value) {
-  if (value === undefined || value === null) return "";
-  return String(value);
+  return extractList(response, ["boards", "educationBoards"]);
 }
 
 function mapBoardOption(board) {
@@ -144,28 +77,6 @@ function getSearchParams(searchTerm) {
   return looksLikeCode ? { schoolCode: value } : { schoolName: value };
 }
 
-function useOutsideClick(ref, onOutside) {
-  useEffect(() => {
-    function handleClick(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        onOutside();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onOutside, ref]);
-}
-
-function useDebounce(value, delay = 400) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
-
 const BOARD_DROPDOWN_LIMIT = 10;
 
 async function fetchAllBoardPages(query = "") {
@@ -209,195 +120,26 @@ function useBoardSearch() {
 }
 
 function BoardFilter({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
   const { boards, loading, search } = useBoardSearch();
-  useOutsideClick(ref, () => {
-    setOpen(false);
-    setQuery("");
-  });
-
-  const debouncedQuery = useDebounce(query, 400);
-
-  useEffect(() => {
-    search("");
-  }, [search]);
-
-  useEffect(() => {
-    if (open) search(debouncedQuery);
-  }, [debouncedQuery, open, search]);
 
   const allOption = { value: "", label: "All Board" };
   const options = [allOption, ...boards];
-  const selectedLabel = value
-    ? boards.find((b) => b.value === value)?.label || "Board selected"
-    : "All Board";
-
-  const handleOpen = () => {
-    setOpen((v) => !v);
-    setQuery("");
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
+  const selectedOption = value
+    ? boards.find((b) => b.value === value) ?? { value, label: "Board selected" }
+    : allOption;
 
   return (
-    <div className="relative w-full sm:w-[200px]" ref={ref}>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="h-[40px] w-full flex items-center justify-between rounded-[12px] border border-[#c7cbd1] bg-white px-4 text-[14px] outline-none transition focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-      >
-        <span className={value ? "text-[#20242a]" : "text-[#5b626a]"}>
-          {loading && boards.length === 0 ? "Loading..." : selectedLabel}
-        </span>
-        {loading && boards.length === 0 ? (
-          <Loader2 size={13} className="animate-spin text-[#6b7280] flex-shrink-0" />
-        ) : (
-          <ChevronDown
-            size={16}
-            className={`text-[#5b626a] flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-            strokeWidth={2}
-          />
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-[#e7ecef] rounded-xl shadow-lg z-50">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search
-                size={13}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search board..."
-                className="w-full pl-7 pr-7 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#155966]/20"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-          <ul className="max-h-48 overflow-y-auto py-1">
-            {loading ? (
-              <li className="flex justify-center py-4">
-                <Loader2 size={16} className="animate-spin text-[#155966]" />
-              </li>
-            ) : options.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-gray-400 text-center">
-                No boards found
-              </li>
-            ) : (
-              options.map((b) => (
-                <li
-                  key={b.value || "all"}
-                  onClick={() => {
-                    onChange(b.value);
-                    setOpen(false);
-                    setQuery("");
-                  }}
-                  className={`px-4 py-2.5 text-[14px] cursor-pointer hover:bg-[#f5fafc] transition-colors
-                    ${value === b.value ? "text-[#155966] font-medium" : "text-[#20242a]"}`}
-                >
-                  {b.label}
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActionMenu({ schoolName, onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-        aria-label={`Open actions for ${schoolName}`}
-      >
-        <MoreHorizontal size={20} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onEdit();
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Pencil size={14} className="text-[#155966]" />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onDelete();
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#d14343] transition hover:bg-[#fff5f5]"
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DeleteSchoolModal({ schoolName, deleting, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-[22px] bg-white p-7 text-center shadow-2xl">
-        <h2 className="text-lg font-semibold text-[#20242a]">Delete School</h2>
-        <p className="mt-2 text-sm text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{schoolName}</span>?
-        </p>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 rounded-xl border border-[#d7dde2] py-2.5 text-sm font-medium text-[#5b626a] transition hover:bg-[#f7fafb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting && <Loader2 size={14} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
+    <div className="w-full sm:w-[200px]">
+      <SearchableSelect
+        value={selectedOption}
+        onChange={(option) => onChange(option.value)}
+        onSearch={search}
+        options={options}
+        placeholder="All Board"
+        searchPlaceholder="Search board..."
+        loading={loading}
+        emptyLabel="No boards found"
+      />
     </div>
   );
 }
@@ -869,44 +611,23 @@ export default function SchoolsPage() {
 
   return (
     <div className="ty-page-shell">
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="ty-page-title">
-            Schools
-          </h1>
-          <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
-            {totalSchools} Schools
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
-        >
-          <Plus size={22} strokeWidth={2.2} />
-          Add School
-        </button>
-      </div>
+      <PageHeader
+        title="Schools"
+        subtitle={`${totalSchools} Schools`}
+        actionLabel="Add School"
+        onAction={openAddModal}
+      />
 
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative block w-full max-w-[420px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search schools by name, school code..."
-            className="h-[40px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={searchTerm}
+          onChange={(next) => {
+            setSearchTerm(next);
+            setPage(1);
+          }}
+          placeholder="Search schools by name, school code..."
+          className="max-w-[420px]"
+        />
 
         <BoardFilter
           value={boardId}
@@ -922,100 +643,72 @@ export default function SchoolsPage() {
           Schools
         </h2>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            <Loader2 size={22} className="mx-auto animate-spin text-[#155966]" />
-            <p className="mt-3">Loading schools...</p>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && schools.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            No schools found.
-          </div>
-        )}
+        <DataTable
+          minWidth={920}
+          rowKey={(row) => row.rowId}
+          loading={loading}
+          error={error}
+          emptyLabel="No schools found."
+          rows={schools}
+          columns={[
+            {
+              key: "name",
+              header: "School Name",
+              render: (school) => (
+                <span className="font-medium">{school.name}</span>
+              ),
+            },
+            {
+              key: "address",
+              header: "Address",
+              render: (school) => school.address || "Not available",
+            },
+            {
+              key: "boardName",
+              header: "Board",
+              render: (school) => school.boardName,
+            },
+            {
+              key: "schoolCode",
+              header: "School Code",
+              render: (school) => school.schoolCode || "Not available",
+            },
+            {
+              key: "actions",
+              header: <span className="sr-only">Actions</span>,
+              align: "right",
+              render: (school) => (
+                <ActionMenu
+                  label={school.name}
+                  onEdit={() => openEditModal(school)}
+                  onDelete={() => setDeleteTarget(school)}
+                />
+              ),
+            },
+          ]}
+        />
 
         {!loading && !error && schools.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] border-collapse">
-                <thead>
-                  <tr className="bg-[#e9f2f5]">
-                    <th className="rounded-l-2xl px-5 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      School Name
-                    </th>
-                    <th className="px-5 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Address
-                    </th>
-                    <th className="px-5 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Board
-                    </th>
-                    <th className="px-5 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      School Code
-                    </th>
-                    <th className="rounded-r-2xl px-5 py-4 text-right text-[16px] font-medium text-[#16191d]">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schools.map((school) => (
-                    <tr
-                      key={school.rowId}
-                      className="border-b border-[#eef0f2] last:border-b-0"
-                    >
-                      <td className="px-5 py-5 text-[15px] font-medium text-[#2a2d32]">
-                        {school.name}
-                      </td>
-                      <td className="px-5 py-5 text-[15px] text-[#2a2d32]">
-                        {school.address || "Not available"}
-                      </td>
-                      <td className="px-5 py-5 text-[15px] text-[#2a2d32]">
-                        {school.boardName}
-                      </td>
-                      <td className="px-5 py-5 text-[15px] text-[#2a2d32]">
-                        {school.schoolCode || "Not available"}
-                      </td>
-                      <td className="px-5 py-5 text-right">
-                        <ActionMenu
-                          schoolName={school.name}
-                          onEdit={() => openEditModal(school)}
-                          onDelete={() => setDeleteTarget(school)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <PaginationControls
-              className="mt-6"
-              rowsPerPage={pageSize}
-              rowsPerPageOptions={[10, 20, 50]}
-              onRowsPerPageChange={(nextPageSize) => {
-                setPageSize(nextPageSize);
-                setPage(1);
-              }}
-              rangeLabel={`${startRow}-${endRow} of ${totalSchools}`}
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              hasPrev={pagination.hasPrev}
-              hasNext={pagination.hasNext}
-              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
-              onNext={() =>
-                setPage((value) =>
-                  Math.min(value + 1, pagination.totalPages || value + 1)
-                )
-              }
-            />
-          </>
+          <PaginationControls
+            className="mt-6"
+            rowsPerPage={pageSize}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            rangeLabel={`${startRow}-${endRow} of ${totalSchools}`}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasPrev={pagination.hasPrev}
+            hasNext={pagination.hasNext}
+            onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+            onNext={() =>
+              setPage((value) =>
+                Math.min(value + 1, pagination.totalPages || value + 1)
+              )
+            }
+          />
         )}
       </section>
 
@@ -1042,9 +735,21 @@ export default function SchoolsPage() {
       )}
 
       {deleteTarget && (
-        <DeleteSchoolModal
-          schoolName={deleteTarget.name}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Delete School"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">
+                {deleteTarget.name}
+              </span>
+              ?
+            </>
+          }
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onCancel={() => {
             if (!deleting) {
               setDeleteTarget(null);

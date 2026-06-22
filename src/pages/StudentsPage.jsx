@@ -1,39 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Search, Plus, MoreHorizontal, ChevronDown,
-  Pencil, Trash2,
-  Loader2, X, Eye, EyeOff,
+  Search, ChevronDown,
+  Loader2, Eye, EyeOff, X,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import SearchableSelect from "../components/ui/SearchableSelect";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import useDebounce from "../hooks/useDebounce";
+import useOutsideClick from "../hooks/useOutsideClick";
 import {
   fetchAllStudents, createStudent, updateStudent,
   deleteStudent, fetchSchools, fetchClasses,
 } from "../api/authService";
 
-
-function useOutsideClick(ref, cb) {
-  useEffect(() => {
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) cb();
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-}
-
-function useDebounce(value, delay = 400) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
-
 const DROPDOWN_LIMIT = 50;
 
-//  Fetch all pages helper 
+//  Fetch all pages helper
 async function fetchAllPages(fetcher, query = "") {
   let page = 1;
   let all = [];
@@ -108,116 +95,7 @@ function useGradeSearch(schoolId) {
   return { allGrades, loadingGrades, fetchGrades };
 }
 
-//  Searchable Select 
-function SearchableSelect({
-  value,
-  onChange,
-  onSearch,
-  onOpen,
-  options = [],
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  disabled = false,
-  loading = false,
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
-  useOutsideClick(ref, () => { setOpen(false); setQuery(""); });
-
-  const debouncedQuery = useDebounce(query, 400);
-
-  useEffect(() => {
-    if (open && onSearch) onSearch(debouncedQuery);
-  }, [debouncedQuery, open]);
-
-  const displayOptions = onSearch
-    ? options
-    : options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
-
-  const handleOpen = () => {
-    if (disabled) return;
-    setOpen(true);
-    setQuery("");
-    if (onSearch) onSearch("");
-    if (onOpen) onOpen();
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const handleSelect = (opt) => {
-    onChange(opt);
-    setOpen(false);
-    setQuery("");
-  };
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        disabled={disabled || loading}
-        onClick={handleOpen}
-        className={`flex items-center justify-between w-full border rounded-lg px-4 py-2.5 text-sm transition-colors
-          ${disabled || loading
-            ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-200"
-            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 cursor-pointer"}
-          ${open ? "border-[#23616E] ring-1 ring-[#23616E]/20" : ""}`}
-      >
-        <span className={value?.label ? "text-gray-800" : "text-gray-400"}>
-          {loading ? "Loading..." : value?.label || placeholder}
-        </span>
-        {loading
-          ? <Loader2 size={14} className="animate-spin text-gray-400" />
-          : <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-        }
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-gray-200 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-            <Search size={13} className="text-gray-400 shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="flex-1 text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600">
-                <X size={12} />
-              </button>
-            )}
-          </div>
-          <div className="max-h-44 overflow-y-auto py-1">
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 size={16} className="animate-spin text-[#23616E]" />
-              </div>
-            ) : displayOptions.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No results found</p>
-            ) : (
-              displayOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleSelect(opt)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors
-                    ${value?.value === opt.value ? "text-[#23616E] font-medium" : "text-gray-700"}`}
-                >
-                  {opt.label}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-//  School Filter Dropdown 
+//  School Filter Dropdown
 function SchoolFilter({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -313,56 +191,7 @@ function SchoolFilter({ value, onChange }) {
   );
 }
 
-//  Action Menu 
-function ActionMenu({ onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-      >
-        <MoreHorizontal size={20} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Pencil size={14} className="text-[#155966]" />
-            Edit
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#d14343] transition hover:bg-[#fff5f5]"
-          >
-            <Trash2 size={14} />
-            Remove
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-//  Add / Edit Student Modal 
+//  Add / Edit Student Modal
 function StudentModal({ initialData = null, onClose, onSuccess }) {
   const isEdit = initialData !== null;
 
@@ -584,7 +413,7 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
             <SearchableSelect
               value={selectedGrade}
               onChange={setSelectedGrade}
-              onOpen={fetchGrades}
+              onSearch={fetchGrades}
               options={allGrades}
               placeholder={selectedSchool ? "Select Grade" : "Select a school first"}
               searchPlaceholder="Search grade..."
@@ -618,38 +447,6 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
   );
 }
 
-//  Delete Confirm Modal
-function DeleteDialog({ studentName, onConfirm, onCancel, deleting }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-base font-bold text-gray-800 mb-2">Remove Student</h3>
-        <p className="text-sm text-gray-500 mb-6">
-          Are you sure you want to remove{" "}
-          <span className="font-semibold text-gray-700">{studentName}</span>? This action cannot be undone.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={deleting}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            {deleting && <Loader2 size={13} className="animate-spin" />}
-            {deleting ? "Removing..." : "Remove"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 //  Main Page
 const ITEMS_PER_PAGE = 10;
 
@@ -675,7 +472,7 @@ export default function StudentsPage() {
 
     const params = { page, limit: itemsPerPage };
     if (filterSchoolId) params.schoolId = Number(filterSchoolId);
-    if (debouncedSearch.trim()) params.name = debouncedSearch.trim(); 
+    if (debouncedSearch.trim()) params.name = debouncedSearch.trim();
 
     fetchAllStudents(params)
       .then((res) => {
@@ -693,7 +490,7 @@ export default function StudentsPage() {
         setTotalPages(1);
       })
       .finally(() => setLoading(false));
-  }, [page, itemsPerPage, filterSchoolId, debouncedSearch]); 
+  }, [page, itemsPerPage, filterSchoolId, debouncedSearch]);
 
   useEffect(() => {
     loadStudents();
@@ -712,15 +509,46 @@ export default function StudentsPage() {
     }
   };
 
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPage(1); 
+  const handleSearchChange = (rawValue) => {
+    setSearch(rawValue);
+    setPage(1);
   };
 
   const handleSchoolFilter = (id) => {
     setFilterSchoolId(String(id));
     setPage(1);
   };
+
+  const columns = [
+    { key: "name", header: "Name", render: (s) => (
+      <span className="font-medium text-[#2a2d32]">{s.name || "-"}</span>
+    ) },
+    { key: "contactEmail", header: "Email", render: (s) => s.contactEmail || "-" },
+    { key: "contact", header: "Contact", render: (s) => (
+      s.contactNumber ? `${s.countryCode || "+91"}-${s.contactNumber}` : "-"
+    ) },
+    { key: "school", header: "School", render: (s) => s.school?.schoolName || "-" },
+    { key: "grade", header: "Grade", render: (s) => s.grade?.aliasName || s.grade?.name || "-" },
+    { key: "actions", header: <span className="sr-only">Actions</span>, align: "right", render: (s) => (
+      <ActionMenu
+        label={s.name || "student"}
+        onEdit={() =>
+          setEditData({
+            id: s.id,
+            name: s.name,
+            contactEmail: s.contactEmail,
+            contactNumber: s.contactNumber,
+            countryCode: s.countryCode,
+            schoolId: s.schoolId || s.school?.id,
+            schoolName: s.school?.schoolName || s.school?.name || "",
+            gradeId: s.gradeId || s.grade?.id,
+            gradeName: s.grade?.aliasName || s.grade?.name || "",
+          })
+        }
+        onDelete={() => setDeleteTarget({ id: s.id, name: s.name })}
+      />
+    ) },
+  ];
 
   return (
     <div className="ty-page-shell">
@@ -748,9 +576,18 @@ export default function StudentsPage() {
       )}
 
       {deleteTarget && (
-        <DeleteDialog
-          studentName={deleteTarget.name}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Remove Student"
+          message={
+            <>
+              Are you sure you want to remove{" "}
+              <span className="font-semibold text-gray-700">{deleteTarget.name}</span>? This action cannot be undone.
+            </>
+          }
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onConfirm={handleDelete}
           onCancel={() => {
             if (!deleting) setDeleteTarget(null);
@@ -759,43 +596,26 @@ export default function StudentsPage() {
       )}
 
       {/* Header: title + count + button  */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-5">
-        <div>
-          <h1 className="ty-page-title">Students</h1>
-          <p className="mt-1 text-sm text-[#5b626a]">
-            {debouncedSearch.trim()
-              ? `${totalCount} result${totalCount !== 1 ? "s" : ""}`
-              : filterSchoolId
-              ? `${totalCount} Students in selected school`
-              : `${totalCount} Students`}
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#23616E] hover:bg-[#1d5260] text-white text-base font-semibold px-6 py-3 rounded-xl transition-colors"
-        >
-          <Plus size={18} />
-          Add Student
-        </button>
-      </div>
+      <PageHeader
+        title="Students"
+        subtitle={
+          debouncedSearch.trim()
+            ? `${totalCount} result${totalCount !== 1 ? "s" : ""}`
+            : filterSchoolId
+            ? `${totalCount} Students in selected school`
+            : `${totalCount} Students`
+        }
+        actionLabel="Add Student"
+        onAction={() => setShowModal(true)}
+      />
 
       {/* Search + Filter card */}
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative block w-full max-w-[370px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            placeholder="Search students by name..."
-            value={search}
-            onChange={handleSearchChange}
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] tracking-[0] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={handleSearchChange}
+          placeholder="Search students by name..."
+        />
 
         <SchoolFilter
           value={filterSchoolId}
@@ -809,70 +629,14 @@ export default function StudentsPage() {
           Students
         </h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse">
-            <thead>
-              <tr className="bg-[#e9f2f5]">
-                <th className="rounded-l-2xl px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Name</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Email</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Contact</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">School</th>
-                <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">Grade</th>
-                <th className="rounded-r-2xl px-4 py-4 sm:px-5">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-16">
-                    <Loader2 size={22} className="animate-spin text-[#23616E] mx-auto" />
-                  </td>
-                </tr>
-              ) : students.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-16 text-sm text-[#5b626a]">
-                    No students found.
-                  </td>
-                </tr>
-              ) : (
-                students.map((s) => (
-                  <tr key={s.id} className="border-b border-[#eef0f2] last:border-b-0">
-                    <td className="px-4 py-5 text-[15px] font-medium text-[#2a2d32] sm:px-5">{s.name || "-"}</td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{s.contactEmail || "-"}</td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                      {s.contactNumber
-                        ? `${s.countryCode || "+91"}-${s.contactNumber}`
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{s.school?.schoolName || "-"}</td>
-                    <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">{s.grade?.aliasName || s.grade?.name || "-"}</td>
-                    <td className="px-4 py-5 text-right sm:px-5">
-                      <ActionMenu
-                        onEdit={() =>
-                          setEditData({
-                            id: s.id,
-                            name: s.name,
-                            contactEmail: s.contactEmail,
-                            contactNumber: s.contactNumber,
-                            countryCode: s.countryCode,
-                            schoolId: s.schoolId || s.school?.id,
-                            schoolName: s.school?.schoolName || s.school?.name || "",
-                            gradeId: s.gradeId || s.grade?.id,
-                            gradeName: s.grade?.aliasName || s.grade?.name || "",
-                          })
-                        }
-                        onDelete={() => setDeleteTarget({ id: s.id, name: s.name })}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          rows={students}
+          loading={loading}
+          emptyLabel="No students found."
+          rowKey={(s) => s.id}
+          minWidth={960}
+        />
 
         {/* Pagination */}
         {!loading && totalCount > 0 && (

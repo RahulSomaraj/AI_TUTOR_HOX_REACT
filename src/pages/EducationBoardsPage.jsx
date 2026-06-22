@@ -1,78 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Eye,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Eye, Loader2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PaginationControls from "../components/PaginationControls";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import { extractList, extractPagination } from "../api/normalize";
 import {
   createBoard,
   deleteBoard,
   fetchBoards,
   updateBoard,
 } from "../api/authService";
-
-function extractBoards(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.boards)) return response.boards;
-  if (Array.isArray(response?.data?.boards)) return response.data.boards;
-  if (Array.isArray(response?.data?.data)) return response.data.data;
-  return [];
-}
-
-function extractPagination(response, fallbackCount, fallbackPageSize) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (pagination.totalCount && pagination.pageSize
-          ? Math.ceil(pagination.totalCount / pagination.pageSize)
-          : 1)
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
 
 function mapBoardRow(board) {
   return {
@@ -104,125 +45,6 @@ function StatusBadge({ isActive }) {
     >
       {isActive ? "Active" : "Inactive"}
     </span>
-  );
-}
-
-function ActionMenu({ boardName, onView, onEdit, onRemove }) {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const handleClick = () => setOpen(false);
-    document.addEventListener("click", handleClick);
-
-    return () => {
-      document.removeEventListener("click", handleClick);
-    };
-  }, [open]);
-
-  return (
-    <div className="relative inline-flex">
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((value) => !value);
-        }}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-        aria-label={`Open actions for ${boardName}`}
-      >
-        <MoreHorizontal size={22} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div
-          className="absolute right-0 top-full z-20 mt-2 w-40 overflow-hidden rounded-xl border border-[#e6edf0] bg-white shadow-[0_18px_42px_rgba(16,38,48,0.16)]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              onView();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-[#20242a] transition hover:bg-[#f3f8fa]"
-          >
-            <Eye size={15} className="text-[#5b626a]" />
-            View
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onEdit();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-[#20242a] transition hover:bg-[#f3f8fa]"
-          >
-            <Pencil size={15} className="text-[#5b626a]" />
-            Edit Board
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onRemove();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-[#d14343] transition hover:bg-[#fff5f5]"
-          >
-            <Trash2 size={15} />
-            Delete Board
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ConfirmDeleteModal({ boardName, deleting, error, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#122731]/45 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[24px] bg-white p-7 shadow-[0_30px_80px_rgba(16,38,48,0.22)]">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fff0f0]">
-          <AlertTriangle size={24} className="text-[#d14343]" />
-        </div>
-
-        <h2 className="mt-5 text-center text-[24px] font-semibold text-[#20242a]">
-          Delete Board
-        </h2>
-        <p className="mt-3 text-center text-sm leading-6 text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{boardName}</span>? This
-          action cannot be undone.
-        </p>
-
-        {error && (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#cdd7dc] px-5 text-sm font-medium text-[#44525b] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#d14343] px-6 text-sm font-semibold text-white transition hover:bg-[#b93636] disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {deleting && <Loader2 size={16} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -477,7 +299,9 @@ export default function EducationBoardsPage() {
           setError("");
 
           const response = await fetchBoards(queryParams);
-          const extractedBoards = extractBoards(response).map(mapBoardRow);
+          const extractedBoards = extractList(response, ["boards", "data"]).map(
+            mapBoardRow
+          );
           const extractedPagination = extractPagination(
             response,
             extractedBoards.length,
@@ -558,46 +382,63 @@ export default function EducationBoardsPage() {
     }
   };
 
+  const columns = [
+    { key: "name", header: "Board Name" },
+    { key: "fullName", header: "Full Name" },
+    { key: "country", header: "Country" },
+    {
+      key: "status",
+      header: "Status",
+      render: (board) => <StatusBadge isActive={board.isActive} />,
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">Actions</span>,
+      align: "right",
+      render: (board) => (
+        <ActionMenu
+          label={board.name}
+          extraItems={[
+            {
+              label: "View",
+              icon: <Eye size={14} className="text-[#155966]" />,
+              onClick: () => {
+                navigate(`/education-boards/${board.id}/grades`, {
+                  state: { board },
+                });
+              },
+            },
+          ]}
+          onEdit={() => {
+            setEditTarget(board);
+          }}
+          onDelete={() => {
+            setDeleteError("");
+            setDeleteTarget(board);
+          }}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="ty-page-shell">
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="ty-page-title">
-            Education Boards
-          </h1>
-          <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
-            {totalBoards} Education Boards
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
-        >
-          <Plus size={22} strokeWidth={2.2} />
-          Add Board
-        </button>
-      </div>
+      <PageHeader
+        title="Education Boards"
+        subtitle={`${totalBoards} Education Boards`}
+        actionLabel="Add Board"
+        onAction={() => setShowAddModal(true)}
+      />
 
       <div className="mb-6 rounded-[18px] bg-white px-4 py-4 sm:px-5">
-        <label className="relative block w-full max-w-[370px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search boards by name..."
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] tracking-[0] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          placeholder="Search boards by name..."
+        />
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
@@ -605,85 +446,18 @@ export default function EducationBoardsPage() {
           Education Boards
         </h2>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            Loading education boards...
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && boards.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            No education boards found.
-          </div>
-        )}
+        <DataTable
+          columns={columns}
+          rows={boards}
+          loading={loading}
+          error={error}
+          emptyLabel="No education boards found."
+          rowKey={(board) => board.id}
+          minWidth={960}
+        />
 
         {!loading && !error && boards.length > 0 && (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] border-collapse">
-                <thead>
-                  <tr className="bg-[#e9f2f5]">
-                    <th className="rounded-l-2xl px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">
-                      Board Name
-                    </th>
-                    <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">
-                      Full Name
-                    </th>
-                    <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">
-                      Country
-                    </th>
-                    <th className="px-4 py-4 text-left text-[16px] font-medium text-[#16191d] sm:px-5">
-                      Status
-                    </th>
-                    <th className="rounded-r-2xl px-4 py-4 text-right text-[16px] font-medium text-[#16191d] sm:px-5">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {boards.map((board) => (
-                    <tr key={board.id} className="border-b border-[#eef0f2] last:border-b-0">
-                      <td className="px-4 py-5 text-[15px] font-medium text-[#2a2d32] sm:px-5">
-                        {board.name}
-                      </td>
-                      <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                        {board.fullName}
-                      </td>
-                      <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                        {board.country}
-                      </td>
-                      <td className="px-4 py-5 text-[15px] text-[#2a2d32] sm:px-5">
-                        <StatusBadge isActive={board.isActive} />
-                      </td>
-                      <td className="px-4 py-5 text-right sm:px-5">
-                        <ActionMenu
-                          boardName={board.name}
-                          onView={() => {
-                            navigate(`/education-boards/${board.id}/grades`, {
-                              state: { board },
-                            });
-                          }}
-                          onEdit={() => {
-                            setEditTarget(board);
-                          }}
-                          onRemove={() => {
-                            setDeleteError("");
-                            setDeleteTarget(board);
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
             <PaginationControls
               className="mt-6"
               rowsPerPage={limit}
@@ -729,10 +503,26 @@ export default function EducationBoardsPage() {
       )}
 
       {deleteTarget && (
-        <ConfirmDeleteModal
-          boardName={deleteTarget.name}
-          deleting={deleting}
-          error={deleteError}
+        <ConfirmDialog
+          title="Delete Board"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">
+                {deleteTarget.name}
+              </span>
+              ? This action cannot be undone.
+              {deleteError && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {deleteError}
+                </div>
+              )}
+            </>
+          }
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          busy={deleting}
+          tone="danger"
           onCancel={() => {
             if (!deleting) {
               setDeleteTarget(null);

@@ -4,12 +4,13 @@ import {
   CheckCircle2,
   ImagePlus,
   Loader2,
-  Plus,
-  Search,
   Send,
   X,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import { extractList } from "../api/normalize";
 import { fetchNotifications, sendNotification, uploadFile } from "../api/authService";
 
 const CATEGORY_OPTIONS = [
@@ -52,16 +53,6 @@ function buildNotificationPayload(form) {
   }
 
   return payload;
-}
-
-function getNotificationList(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-  if (Array.isArray(response?.data?.notifications)) return response.data.notifications;
-  if (Array.isArray(response?.data?.items)) return response.data.items;
-  if (Array.isArray(response?.notifications)) return response.notifications;
-  if (Array.isArray(response?.items)) return response.items;
-  return [];
 }
 
 function getPagination(response, fallbackCount = 0, fallbackPageSize = DEFAULT_PAGE_SIZE) {
@@ -517,7 +508,9 @@ export default function NotificationsPage() {
 
     try {
       const response = await fetchNotifications({ page, limit: pageSize });
-      const list = getNotificationList(response).map(normalizeNotification);
+      const list = extractList(response, ["notifications", "items"]).map(
+        normalizeNotification
+      );
       setNotifications(list);
       setPagination(getPagination(response, list.length, pageSize));
     } catch (err) {
@@ -570,40 +563,20 @@ export default function NotificationsPage() {
   return (
     <div className="ty-page-shell">
       <div className="mx-auto max-w-[1600px]">
-        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="ty-page-title">
-              Notifications
-            </h1>
-            <p className="mt-2 text-lg text-[#2f3941]">
-              Manage your notifications
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex h-[64px] items-center justify-center gap-3 rounded-[10px] bg-[#2a6f7d] px-8 text-[18px] font-semibold text-white transition hover:bg-[#235f6b]"
-          >
-            <Plus size={24} />
-            Create Notification
-          </button>
-        </div>
+        <PageHeader
+          title="Notifications"
+          subtitle="Manage your notifications"
+          actionLabel="Create Notification"
+          onAction={() => setShowCreateModal(true)}
+        />
 
         <section className="rounded-[26px] bg-white/85 p-5 shadow-[0_16px_40px_rgba(36,83,97,0.06)] backdrop-blur sm:p-6">
-          <label className="relative block w-full max-w-[460px]">
-            <Search
-              size={22}
-              className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[#20242a]"
-            />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search notifications..."
-              className="h-[52px] w-full rounded-full border border-[#d5d9df] bg-[#f7f8fb] pl-14 pr-5 text-[18px] text-[#20242a] outline-none transition placeholder:text-[#6b7280] focus:border-[#23616E] focus:ring-2 focus:ring-[#23616E]/10"
-            />
-          </label>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search notifications..."
+            className="max-w-[460px]"
+          />
         </section>
 
         <section className="mt-8 min-h-[420px] rounded-[30px] border border-white/50 bg-white/35 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:p-6">

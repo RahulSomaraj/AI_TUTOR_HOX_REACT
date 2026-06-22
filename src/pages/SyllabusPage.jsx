@@ -4,7 +4,6 @@ import {
   ChevronUp,
   Loader2,
   MoreHorizontal,
-  Plus,
   Search,
   X,
 } from "lucide-react";
@@ -16,20 +15,13 @@ import {
   fetchSyllabi,
 } from "../api/authService";
 import PaginationControls from "../components/PaginationControls";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import { extractList } from "../api/normalize";
+import useDebounce from "../hooks/useDebounce";
+import useOutsideClick from "../hooks/useOutsideClick";
 
 const PAGE_SIZE = 10;
-
-function extractList(response, keys) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-
-  for (const key of keys) {
-    if (Array.isArray(response?.[key])) return response[key];
-    if (Array.isArray(response?.data?.[key])) return response.data[key];
-  }
-
-  return [];
-}
 
 function extractPagination(response) {
   return response?.pagination ?? response?.data?.pagination ?? null;
@@ -328,27 +320,6 @@ function ProgressOverview({ subjects }) {
       </div>
     </aside>
   );
-}
-
-function useOutsideClick(ref, onOutside) {
-  useEffect(() => {
-    function handleClick(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        onOutside();
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onOutside, ref]);
-}
-
-function useDebounce(value, delay = 400) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
 }
 
 const BOARD_DROPDOWN_LIMIT = 10;
@@ -996,35 +967,22 @@ export default function SyllabusPage() {
 
   return (
     <main className="ty-page-shell">
-      <div className="mb-7 flex items-center justify-between">
-        <h1 className="ty-page-title">Syllabus</h1>
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#155966] px-5 text-sm font-semibold text-white transition hover:bg-[#104a55]"
-        >
-          <Plus size={18} />
-          Add Subject
-        </button>
-      </div>
+      <PageHeader
+        title="Syllabus"
+        actionLabel="Add Subject"
+        onAction={() => setShowAddModal(true)}
+      />
 
       <section className="mb-5 flex min-h-[66px] flex-wrap items-center justify-between gap-3 rounded-lg bg-white px-5 shadow-sm">
-        <label className="relative block w-full max-w-[360px]">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#98a2a8]"
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by subjects, chapter or topic..."
-            className="h-9 w-full rounded-full border border-[#d9dfe2] bg-[#f8f8fa] pl-10 pr-4 text-xs text-slate-700 outline-none placeholder:text-[#8f989e] focus:border-[#155966] focus:bg-white"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          placeholder="Search by subjects, chapter or topic..."
+          className="max-w-[360px]"
+        />
 
         <div className="flex items-center gap-3">
           <SubjectCodeDropdown
