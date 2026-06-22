@@ -6,6 +6,27 @@
 
 ---
 
+## Implementation status (updated 2026-06-22)
+
+**Done:**
+- Phase 0 hardening: `.env.example`, axios timeout fallback, DEV-gated `logger` (removed PII `console.*`), root `ErrorBoundary`, `package.json` cleanup.
+- Centralized auth/session: `lib/session.js` + `app/AuthContext` (replaces scattered `localStorage`); wired into `ProtectedRoute`, `loginPage`, `Navbar`.
+- API layer: `api/normalize.js` (de-duped helpers) + `api/services/{auth,catalog}.js`; `authService.js` is now a compatibility barrel.
+- Server state: TanStack Query added; `features/subjects/useSubjects.js` is the reference Query hook.
+- Shared UI kit: `components/ui/{Modal,ConfirmDialog,DataTable,PageHeader,SearchInput,SearchableSelect,ActionMenu}` + `hooks/{useDebounce,useOutsideClick}`.
+- **14 of 18 pages migrated to the kit** (all CRUD/list pages); 4 left intentionally (Attendance, TopicDetail, Dashboard, login).
+- Responsive app shell: drawer sidebar + Navbar hamburger + responsive layout.
+- Fixed 5 case-sensitive import bugs.
+- Playwright e2e suite (`playwright.config.js`, `e2e/`, `E2E_TESTING.md`). App verified running.
+- See `FRONTEND_GUIDE.md` for conventions.
+
+**Still open (future work):**
+- Security Phase 2 — httpOnly-cookie tokens + CSRF (needs backend), and role-based route guards. Tokens are still `localStorage`-backed today.
+- `react-hook-form` + `zod` validation layer.
+- Optional: convert the remaining heavy form modals to the shared `Modal`; unit tests; incremental TypeScript.
+
+---
+
 ## 1. Current architecture (as-is)
 
 ```
