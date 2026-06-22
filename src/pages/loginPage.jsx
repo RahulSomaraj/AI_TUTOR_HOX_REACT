@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { loginAndGetToken } from "../api/authService";
+import { useAuth } from "../app/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +23,7 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      await loginAndGetToken(username.trim(), password.trim());
+      await login(username.trim(), password.trim());
       navigate("/", { replace: true });
     } catch (err) {
       const msg =

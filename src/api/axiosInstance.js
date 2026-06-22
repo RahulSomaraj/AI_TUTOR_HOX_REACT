@@ -1,7 +1,15 @@
 import axios from "axios";
+import {
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  clearSession,
+} from "../lib/session";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS);
+// Fall back to 30s if the env var is missing/invalid — `Number(undefined)` is
+// NaN, which axios treats as "no timeout" (requests could hang forever).
+const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 30_000;
 
 // Tracks whether a refresh call is already in flight
 let isRefreshing = false;
@@ -21,9 +29,7 @@ function rejectPending(error) {
 }
 
 function clearSessionAndRedirect() {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("adminUser");
+  clearSession();
   window.location.href = "/login";
 }
 
@@ -37,7 +43,7 @@ const axiosInstance = axios.create({
 // Automatically attach the stored access token to every outgoing request.
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
@@ -52,9 +58,9 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    const is401            = error.response?.status === 401;
-    const isRefreshRoute   = original.url?.includes("/refresh-token");
-    const alreadyRetried   = original._retry;
+    const is401 = error.response?.status === 401;
+    const isRefreshRoute = original?.url?.includes("/refresh-token");
+    const alreadyRetried = original?._retry;
 
     // Don't attempt refresh if:
     //  - It wasn't a 401
@@ -80,7 +86,7 @@ axiosInstance.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
+      const refreshToken = getRefreshToken();
       if (!refreshToken) throw new Error("No refresh token stored.");
 
       // Call /refresh-token with raw axios so this request bypasses our
@@ -95,7 +101,7 @@ axiosInstance.interceptors.response.use(
       if (!raw) throw new Error("Refresh response missing token.");
 
       const newToken = raw.replace(/^Bearer\s+/i, "");
-      localStorage.setItem("accessToken", newToken);
+      setAccessToken(newToken);
 
       // Unblock every request that was queued while we were refreshing
       resolvePending(newToken);

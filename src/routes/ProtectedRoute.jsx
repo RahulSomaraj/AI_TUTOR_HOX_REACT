@@ -1,9 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../app/AuthContext";
 
+// Client-side gate (UX only — the API remains the real authority). Reads auth
+// state from the centralized AuthContext instead of touching localStorage.
 export default function ProtectedRoute() {
-  const token = localStorage.getItem("accessToken");
+  const { isAuthenticated } = useAuth();
 
-  if (!token) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

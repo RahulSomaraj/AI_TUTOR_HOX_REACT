@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, ChevronDown, Check, Calendar } from "lucide-react";
-import DatePickerModal from "./DatePickerModal";
+import DatePickerModal from "./Datepickermodal";
 import { fetchSchools, fetchClasses, fetchAllStudents, fetchTeachers, createAttendance } from "../../api/authService";
 
 //  Searchable dropdown 

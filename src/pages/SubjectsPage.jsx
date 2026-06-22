@@ -13,79 +13,21 @@ import {
 import PaginationControls from "../components/PaginationControls";
 import {
   createSubject,
-  deleteSubject,
   fetchBoardGrades,
   fetchBoards,
-  fetchSubjects,
   updateSubject,
   uploadFile,
 } from "../api/authService";
+import { extractList, safeId } from "../api/normalize";
+import {
+  useDeleteSubject,
+  useInvalidateSubjects,
+  useSubjectsQuery,
+} from "../features/subjects/useSubjects";
+import logger from "../lib/logger";
 
 const PAGE_SIZE = 10;
 const DROPDOWN_LIMIT = 10;
-
-function extractList(response, keys) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.data)) return response.data;
-
-  for (const key of keys) {
-    if (Array.isArray(response?.[key])) return response[key];
-    if (Array.isArray(response?.data?.[key])) return response.data[key];
-  }
-
-  return [];
-}
-
-function extractPagination(response, fallbackCount = 0, fallbackPageSize = PAGE_SIZE) {
-  const pagination =
-    response?.pagination ??
-    response?.data?.pagination ??
-    response?.meta ??
-    response?.data?.meta ??
-    null;
-
-  if (pagination) {
-    const currentPage = Number(
-      pagination.currentPage ?? pagination.page ?? pagination.pageNumber ?? 1
-    );
-    const totalPages = Number(
-      pagination.totalPages ??
-        pagination.pageCount ??
-        (pagination.totalCount && pagination.pageSize
-          ? Math.ceil(pagination.totalCount / pagination.pageSize)
-          : 1)
-    );
-    const totalCount = Number(
-      pagination.totalCount ?? pagination.total ?? pagination.count ?? fallbackCount
-    );
-    const pageSize = Number(
-      pagination.pageSize ?? pagination.limit ?? pagination.perPage ?? fallbackPageSize
-    );
-
-    return {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    };
-  }
-
-  return {
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: fallbackCount,
-    pageSize: fallbackPageSize,
-    hasPrev: false,
-    hasNext: false,
-  };
-}
-
-function safeId(value) {
-  if (value === undefined || value === null) return "";
-  return String(value);
-}
 
 function mapBoard(board) {
   return {
@@ -456,7 +398,7 @@ function SubjectModal({
         });
         setModalGrades(normalizeGradeList(response));
       } catch (err) {
-        console.error("Failed to load board grades:", err);
+        logger.error("Failed to load board grades:", err);
         setModalGrades([]);
       } finally {
         setLoadingGrades(false);
@@ -816,31 +758,25 @@ function DeleteSubjectModal({ subjectName, deleting, onCancel, onConfirm }) {
 }
 
 export default function SubjectsPage() {
-  const [subjects, setSubjects] = useState([]);
+  // Boards/grades powering the filter + modal dropdowns stay as local state
+  // (search-as-you-type). The subjects list itself is server cache (see below).
   const [grades, setGrades] = useState([]);
   const [boards, setBoards] = useState([]);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalCount: 0,
-    pageSize: PAGE_SIZE,
-    hasPrev: false,
-    hasNext: false,
-  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [selectedGradeId, setSelectedGradeId] = useState("");
   const [selectedBoardId, setSelectedBoardId] = useState("");
-  const [loading, setLoading] = useState(true);
   const [loadingBoards, setLoadingBoards] = useState(false);
   const [loadingGrades, setLoadingGrades] = useState(false);
-  const [error, setError] = useState("");
   const [modalMode, setModalMode] = useState(null);
   const [activeSubject, setActiveSubject] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [actionError, setActionError] = useState("");
+
+  const invalidateSubjects = useInvalidateSubjects();
+  const deleteSubjectMutation = useDeleteSubject();
+  const deleting = deleteSubjectMutation.isPending;
 
   const searchBoards = useCallback(async (query = "") => {
     try {
@@ -853,7 +789,7 @@ export default function SubjectsPage() {
       });
       setBoards(normalizeBoardList(response));
     } catch (err) {
-      console.error("Failed to load education boards:", err);
+      logger.error("Failed to load education boards:", err);
       setBoards([]);
     } finally {
       setLoadingBoards(false);
@@ -878,7 +814,7 @@ export default function SubjectsPage() {
         });
         setGrades(normalizeGradeList(response));
       } catch (err) {
-        console.error("Failed to load board grades:", err);
+        logger.error("Failed to load board grades:", err);
         setGrades([]);
       } finally {
         setLoadingGrades(false);
@@ -920,54 +856,45 @@ export default function SubjectsPage() {
     [grades, selectedGrade]
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  // Debounce the free-text search so we don't refetch on every keystroke; the
+  // debounced value feeds the query key, which is what drives refetching.
+  const debouncedSearch = useDebounce(search, 300);
 
-    const timeoutId = setTimeout(async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const subjectsQuery = useSubjectsQuery({
+    page,
+    limit: pageSize,
+    search: debouncedSearch,
+    boardGradeId: selectedGradeId,
+    boardId: selectedBoardId,
+  });
 
-        const response = await fetchSubjects({
-          page,
-          limit: pageSize,
-          order: "desc",
-          name: search.trim() || undefined,
-          boardGradeId: selectedGradeId || undefined,
-          boardId: selectedBoardId || undefined,
-        });
+  const rawSubjects = subjectsQuery.data?.raw ?? [];
+  const pagination = subjectsQuery.data?.pagination ?? {
+    currentPage: page,
+    totalPages: 1,
+    totalCount: 0,
+    pageSize,
+    hasPrev: false,
+    hasNext: false,
+  };
+  const loading = subjectsQuery.isPending;
+  const loadError = subjectsQuery.isError
+    ? subjectsQuery.error?.response?.data?.message ||
+      subjectsQuery.error?.response?.data?.error ||
+      subjectsQuery.error?.message ||
+      "Failed to load subjects"
+    : "";
+  const error = actionError || loadError;
 
-        const list = extractList(response, ["subjects"]).map((subject, index) =>
-          mapSubjectRow(subject, index, grades, boards)
-        );
-
-        if (!cancelled) {
-          setSubjects(list);
-          setPagination(extractPagination(response, list.length, pageSize));
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err?.response?.data?.message ||
-              err?.response?.data?.error ||
-              err?.message ||
-              "Failed to load subjects"
-          );
-          setSubjects([]);
-          setPagination(extractPagination(null, 0, pageSize));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [boards, grades, page, pageSize, refreshKey, search, selectedBoardId, selectedGradeId]);
+  // Map raw rows here (not in the query) because the display depends on the
+  // separately-loaded boards/grades for label resolution.
+  const subjects = useMemo(
+    () =>
+      rawSubjects.map((subject, index) =>
+        mapSubjectRow(subject, index, grades, boards)
+      ),
+    [rawSubjects, grades, boards]
+  );
 
   const totalSubjects = pagination?.totalCount ?? subjects.length;
 
@@ -989,25 +916,23 @@ export default function SubjectsPage() {
   async function handleDeleteSubject() {
     if (!deleteTarget) return;
 
+    setActionError("");
     try {
-      setDeleting(true);
-      await deleteSubject(deleteTarget.id);
+      await deleteSubjectMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
 
+      // If we just removed the last row on a non-first page, step back a page;
+      // otherwise the mutation's onSuccess already invalidated the list.
       if (subjects.length === 1 && page > 1) {
         setPage((value) => Math.max(value - 1, 1));
-      } else {
-        setRefreshKey((value) => value + 1);
       }
     } catch (err) {
-      setError(
+      setActionError(
         err?.response?.data?.message ||
           err?.response?.data?.error ||
           err?.message ||
           "Failed to delete subject"
       );
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -1207,7 +1132,7 @@ export default function SubjectsPage() {
           onClose={closeModal}
           onSuccess={() => {
             setPage(1);
-            setRefreshKey((value) => value + 1);
+            invalidateSubjects();
           }}
         />
       )}
@@ -1220,7 +1145,7 @@ export default function SubjectsPage() {
           onBoardSearch={searchBoards}
           onClose={closeModal}
           onSuccess={() => {
-            setRefreshKey((value) => value + 1);
+            invalidateSubjects();
           }}
         />
       )}

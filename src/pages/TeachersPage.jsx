@@ -4,7 +4,7 @@ import {
   Plus, Search, Trash2, X, Eye, EyeOff,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
-import CountryCodePicker from "../components/CountryCodePicker";
+import CountryCodePicker from "../components/Countrycodepicker";
 import {
   fetchAdminUsers, fetchSchools, createTeacher, updateTeacher, deleteTeacher,
 } from "../api/authService";

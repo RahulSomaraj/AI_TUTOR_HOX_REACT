@@ -5,7 +5,7 @@ import {
   Loader2, X, Eye, EyeOff,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
-import CountryCodePicker from "../components/CountryCodePicker";
+import CountryCodePicker from "../components/Countrycodepicker";
 import {
   fetchAllStudents, createStudent, updateStudent,
   deleteStudent, fetchSchools, fetchClasses,

@@ -4,7 +4,7 @@ import AttendanceFilters  from "../components/Attendance/AttendanceFilters";
 import AttendanceTable    from "../components/Attendance/AttendanceTable";
 import AttendanceCalendar from "../components/Attendance/AttendanceCalendar";
 import AttendanceStats    from "../components/Attendance/AttendanceStats";
-import DatePickerModal    from "../components/Attendance/DatePickerModal";
+import DatePickerModal    from "../components/Attendance/Datepickermodal";
 import AddAttendanceModal from "../components/Attendance/Addattendancemodal";
 import {
   fetchSchools,

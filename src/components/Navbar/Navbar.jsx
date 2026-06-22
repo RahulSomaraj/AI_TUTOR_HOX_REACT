@@ -1,19 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  adminLogout,
-  deleteAdminAccount,
-  fetchMyProfile,
-} from "../../api/authService";
-
-function readStoredAdminUser() {
-  try {
-    return JSON.parse(localStorage.getItem("adminUser") || "{}");
-  } catch {
-    return {};
-  }
-}
+import { deleteAdminAccount } from "../../api/authService";
+import { useAuth } from "../../app/AuthContext";
+import logger from "../../lib/logger";
 
 function pickName(user) {
   const firstLast = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
@@ -33,8 +23,9 @@ function pickRole(role) {
 function Navbar() {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  const { user, logout, refreshUser } = useAuth();
 
-  const [adminUser, setAdminUser] = useState(() => readStoredAdminUser());
+  const adminUser = user || {};
   const [open, setOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -48,30 +39,9 @@ function Navbar() {
       ? adminUser.avatar.trim()
       : "";
 
-  // Hydrate profile from API if name/id missing
+  // Hydrate profile from API (via AuthContext) if name/id missing
   useEffect(() => {
-    const needsHydration = !adminUser?.id || !adminUser?.name;
-    if (!needsHydration) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const profile = await fetchMyProfile();
-        if (cancelled || !profile) return;
-        const merged = {
-          id: profile.id || profile._id || adminUser.id || null,
-          name: pickName(profile),
-          role: profile.role || profile.userType || adminUser.role || "Admin",
-          avatar: profile.avatar || profile.profileImage || adminUser.avatar || "",
-        };
-        localStorage.setItem("adminUser", JSON.stringify(merged));
-        setAdminUser(merged);
-      } catch {
-        // ignore — fall back to stored values
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    if (!adminUser?.id || !adminUser?.name) refreshUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -86,12 +56,6 @@ function Navbar() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
-
-  function clearSession() {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("adminUser");
-  }
 
   function openLogoutConfirm() {
     setOpen(false);
@@ -109,12 +73,8 @@ function Navbar() {
     setIsSubmitting(true);
     setErrorMsg("");
     try {
-      await adminLogout();
-    } catch (err) {
-      console.error("Logout API failed:", err);
-      // Still proceed to clear local session
+      await logout();
     } finally {
-      clearSession();
       setIsSubmitting(false);
       setShowLogoutConfirm(false);
       navigate("/login", { replace: true });
@@ -130,11 +90,11 @@ function Navbar() {
     setErrorMsg("");
     try {
       await deleteAdminAccount(adminUser.id);
-      clearSession();
+      await logout();
       setShowDeleteConfirm(false);
       navigate("/login", { replace: true });
     } catch (err) {
-      console.error("Delete account failed:", err);
+      logger.error("Delete account failed:", err);
       setErrorMsg(
         err?.response?.data?.message || "Failed to delete account. Please try again."
       );
