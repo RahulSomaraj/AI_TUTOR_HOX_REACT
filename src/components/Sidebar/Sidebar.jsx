@@ -13,6 +13,7 @@ import {
   BookMarked,
   Image,
   Bell,
+  X,
 } from "lucide-react";
 
 const navItems = [
@@ -30,67 +31,86 @@ const navItems = [
   { label: "Notifications", icon: Bell, path: "/notifications" },
 ];
 
-export default function Sidebar() {
+// Static sidebar on lg+; an off-canvas drawer (with backdrop) below lg.
+// `open`/`onClose` are controlled by AdminLayout.
+export default function Sidebar({ open = false, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const isItemActive = (path) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
+    if (path === "/") return location.pathname === "/";
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
 
-    return (
-      location.pathname === path ||
-      location.pathname.startsWith(`${path}/`)
-    );
+  const go = (path) => {
+    navigate(path);
+    onClose?.(); // close the drawer after navigating on mobile
   };
 
   return (
-    <aside className="w-[230px] h-screen bg-white flex flex-col pt-5 pb-6 overflow-y-auto select-none">
-      {/* Logo */}
-      <div className="text-center mb-5 px-4">
-      <span
-        className="text-[#235A6E] text-4xl tracking-[0.3px] underline underline-offset-2 decoration-[#235A6E] decoration-1"
-        style={{ fontFamily: "'Harabara Mais Demo', sans-serif" }}
+    <>
+      {/* Mobile backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-[230px] max-w-[80%] transform flex-col overflow-y-auto bg-white pt-5 pb-6 shadow-xl transition-transform duration-200 ease-out select-none lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        AiTutor
-      </span>
-      </div>
+        {/* Logo + mobile close button */}
+        <div className="mb-5 flex items-center justify-between px-4">
+          <span
+            className="text-[#235A6E] text-4xl tracking-[0.3px] underline underline-offset-2 decoration-[#235A6E] decoration-1"
+            style={{ fontFamily: "'Harabara Mais Demo', sans-serif" }}
+          >
+            AiTutor
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-[#202224] transition hover:bg-[#23616E]/10 lg:hidden"
+            aria-label="Close menu"
+          >
+            <X size={22} />
+          </button>
+        </div>
 
-      {/* Navigation */}
-      <nav className="flex flex-col px-3 gap-1">
-        {navItems.map(({ label, icon, path }) => {
-          const isActive = isItemActive(path);
-
-          return (
-            <button
-              key={label}
-              type="button"
-              onClick={() => navigate(path)}
-              className={`
-                flex items-center gap-3 w-full text-left
-                px-[14px] py-3 rounded-[8px]
-                transition-colors duration-150 border-none outline-none cursor-pointer
-                ${isActive ? "bg-[#23616E]" : "bg-transparent hover:bg-[#23616E]/10"}
-              `}
-            >
-              {createElement(icon, {
-                size: 18,
-                strokeWidth: 1.75,
-                className: isActive ? "text-white" : "text-[#202224]",
-              })}
-
-              <span
-                className={`text-[13.5px] font-medium leading-none ${
-                  isActive ? "text-white" : "text-[#202224]"
+        {/* Navigation */}
+        <nav className="flex flex-col gap-1 px-3">
+          {navItems.map(({ label, icon, path }) => {
+            const isActive = isItemActive(path);
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => go(path)}
+                className={`flex w-full items-center gap-3 rounded-[8px] px-[14px] py-3 text-left transition-colors duration-150 ${
+                  isActive ? "bg-[#23616E]" : "bg-transparent hover:bg-[#23616E]/10"
                 }`}
               >
-                {label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-    </aside>
+                {createElement(icon, {
+                  size: 18,
+                  strokeWidth: 1.75,
+                  className: isActive ? "text-white" : "text-[#202224]",
+                })}
+                <span
+                  className={`text-[13.5px] font-medium leading-none ${
+                    isActive ? "text-white" : "text-[#202224]"
+                  }`}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

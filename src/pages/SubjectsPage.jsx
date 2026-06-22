@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChevronDown,
-  ImageIcon,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ImageIcon, Loader2, X } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
+import PageHeader from "../components/ui/PageHeader";
+import SearchInput from "../components/ui/SearchInput";
+import SearchableSelect from "../components/ui/SearchableSelect";
+import DataTable from "../components/ui/DataTable";
+import ActionMenu from "../components/ui/ActionMenu";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import useDebounce from "../hooks/useDebounce";
 import {
   createSubject,
   fetchBoardGrades,
@@ -105,154 +102,6 @@ function mapSubjectRow(subject, index, gradeOptions, boardOptions) {
   };
 }
 
-function useOutsideClick(ref, onOutside) {
-  useEffect(() => {
-    function handleClick(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        onOutside();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onOutside, ref]);
-}
-
-function useDebounce(value, delay = 350) {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timeoutId);
-  }, [delay, value]);
-
-  return debouncedValue;
-}
-
-function SearchableSelect({
-  value,
-  onChange,
-  onSearch,
-  options = [],
-  placeholder = "Select",
-  searchPlaceholder = "Search...",
-  disabled = false,
-  loading = false,
-  emptyLabel = "No results found",
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef(null);
-  const inputRef = useRef(null);
-  const debouncedQuery = useDebounce(query);
-
-  useOutsideClick(ref, () => {
-    setOpen(false);
-    setQuery("");
-  });
-
-  useEffect(() => {
-    if (open) {
-      onSearch?.(debouncedQuery);
-    }
-  }, [debouncedQuery, onSearch, open]);
-
-  function handleOpen() {
-    if (disabled) return;
-    setOpen((current) => !current);
-    setQuery("");
-    onSearch?.("");
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }
-
-  function handleSelect(option) {
-    onChange(option);
-    setOpen(false);
-    setQuery("");
-  }
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={handleOpen}
-        disabled={disabled}
-        className={`flex h-[40px] w-full items-center justify-between gap-3 rounded-[12px] border px-4 text-left text-[14px] outline-none transition ${
-          disabled
-            ? "cursor-not-allowed border-[#dce3e7] bg-[#f8fafb] text-[#9aa3aa]"
-            : "border-[#c7cbd1] bg-white text-[#5b626a] hover:border-[#155966]"
-        } ${open ? "border-[#155966] ring-2 ring-[#155966]/15" : ""}`}
-      >
-        <span className="min-w-0 flex-1 truncate">
-          {loading && !options.length ? "Loading..." : value?.label || placeholder}
-        </span>
-        {loading && open ? (
-          <Loader2 size={16} className="shrink-0 animate-spin text-[#155966]" />
-        ) : (
-          <ChevronDown
-            className={`shrink-0 text-[#5b626a] transition ${open ? "rotate-180" : ""}`}
-            size={16}
-            strokeWidth={2}
-          />
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <div className="flex items-center gap-2 border-b border-[#eef0f2] px-3 py-2">
-            <Search size={14} className="shrink-0 text-[#7c858c]" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={searchPlaceholder}
-              className="min-w-0 flex-1 bg-transparent text-sm text-[#20242a] outline-none placeholder:text-[#8d969c]"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="rounded p-1 text-[#7c858c] transition hover:bg-[#f3f7f8]"
-                aria-label="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-
-          <div className="max-h-56 overflow-y-auto py-1">
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 size={18} className="animate-spin text-[#155966]" />
-              </div>
-            ) : options.length === 0 ? (
-              <p className="px-4 py-4 text-center text-xs text-[#8d969c]">
-                {emptyLabel}
-              </p>
-            ) : (
-              options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleSelect(option)}
-                  className={`block w-full px-4 py-2.5 text-left text-sm transition hover:bg-[#f5fafc] ${
-                    value?.value === option.value
-                      ? "font-semibold text-[#155966]"
-                      : "text-[#30363b]"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function mapBoardOption(board) {
   const mapped = mapBoard(board);
   return {
@@ -292,53 +141,6 @@ function mergeOption(options, option) {
   if (!option?.value) return options;
   if (options.some((item) => item.value === option.value)) return options;
   return [option, ...options];
-}
-
-function ActionMenu({ subjectName, onEdit, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
-        aria-label={`Open actions for ${subjectName}`}
-      >
-        <MoreHorizontal size={18} strokeWidth={2.2} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onEdit();
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#20242a] transition hover:bg-[#f5fafc]"
-          >
-            <Pencil size={14} className="text-[#155966]" />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onDelete();
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-[#d14343] transition hover:bg-[#fff5f5]"
-          >
-            <Trash2 size={14} />
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
-  );
 }
 
 function SubjectModal({
@@ -723,40 +525,6 @@ function SubjectModal({
   );
 }
 
-function DeleteSubjectModal({ subjectName, deleting, onCancel, onConfirm }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-[22px] bg-white p-7 text-center shadow-2xl">
-        <h2 className="text-lg font-semibold text-[#20242a]">Delete Subject</h2>
-        <p className="mt-2 text-sm text-[#5b626a]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#20242a]">{subjectName}</span>?
-        </p>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={deleting}
-            className="flex-1 rounded-xl border border-[#d7dde2] py-2.5 text-sm font-medium text-[#5b626a] transition hover:bg-[#f7fafb] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting && <Loader2 size={14} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function SubjectsPage() {
   // Boards/grades powering the filter + modal dropdowns stay as local state
   // (search-as-you-type). The subjects list itself is server cache (see below).
@@ -939,46 +707,54 @@ export default function SubjectsPage() {
   const startRow = totalSubjects === 0 ? 0 : (page - 1) * pageSize + 1;
   const endRow = Math.min(page * pageSize, totalSubjects);
 
+  const columns = [
+    {
+      key: "name",
+      header: "Name",
+      render: (row) => (
+        <span className="font-medium text-[#2a2d32]">{row.name}</span>
+      ),
+    },
+    { key: "code", header: "Code" },
+    { key: "boardName", header: "Board" },
+    { key: "boardGradeLabel", header: "Board Grade" },
+    {
+      key: "optional",
+      header: "Optional",
+      render: (row) => (row.isOptional ? "Yes" : "No"),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: (row) => (
+        <ActionMenu
+          label={row.name}
+          onEdit={() => openEditModal(row)}
+          onDelete={() => setDeleteTarget(row)}
+        />
+      ),
+    },
+  ];
+
   return (
     <div className="ty-page-shell">
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="ty-page-title">
-            Subjects
-          </h1>
-          <p className="mt-4 text-[18px] leading-none tracking-[0] text-[#20242a]">
-            {totalSubjects} Subjects
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-[#155966] px-6 text-[17px] font-semibold tracking-[0] text-white transition hover:bg-[#104a55] sm:w-auto"
-        >
-          <Plus size={22} strokeWidth={2.2} />
-          Add Subject
-        </button>
-      </div>
+      <PageHeader
+        title="Subjects"
+        subtitle={`${totalSubjects} Subjects`}
+        actionLabel="Add Subject"
+        onAction={openAddModal}
+      />
 
       <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative block w-full max-w-[370px]">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#20242a]"
-            size={20}
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search subjects by name..."
-            className="h-[38px] w-full rounded-[22px] border border-[#c7cbd1] bg-[#fbfbfd] pl-12 pr-4 text-[14px] text-[#20242a] outline-none transition placeholder:text-[#5b626a] focus:border-[#155966] focus:ring-2 focus:ring-[#155966]/15"
-          />
-        </label>
+        <SearchInput
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          placeholder="Search subjects by name..."
+        />
 
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
           <div className="relative block w-full sm:w-[190px]">
@@ -1021,106 +797,36 @@ export default function SubjectsPage() {
           Subjects List
         </h2>
 
-        {loading && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            <Loader2 size={22} className="mx-auto animate-spin text-[#155966]" />
-            <p className="mt-3">Loading subjects...</p>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && subjects.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#5b626a]">
-            No subjects found.
-          </div>
-        )}
+        <DataTable
+          columns={columns}
+          rows={subjects}
+          loading={loading}
+          error={error}
+          emptyLabel="No subjects found."
+          rowKey={(row) => row.id}
+        />
 
         {!loading && !error && subjects.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] border-collapse">
-                <thead>
-                  <tr className="border-b border-[#edf0f2]">
-                    <th className="px-3 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Name
-                    </th>
-                    <th className="px-3 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Code
-                    </th>
-                    <th className="px-3 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Board
-                    </th>
-                    <th className="px-3 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Board Grade
-                    </th>
-                    <th className="px-3 py-4 text-left text-[16px] font-medium text-[#16191d]">
-                      Optional
-                    </th>
-                    <th className="px-3 py-4 text-right text-[16px] font-medium text-[#16191d]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subjects.map((subject) => (
-                    <tr
-                      key={subject.id}
-                      className="border-b border-[#eef0f2] last:border-b-0"
-                    >
-                      <td className="px-3 py-5 text-[15px] font-medium text-[#2a2d32]">
-                        {subject.name}
-                      </td>
-                      <td className="px-3 py-5 text-[15px] text-[#2a2d32]">
-                        {subject.code}
-                      </td>
-                      <td className="px-3 py-5 text-[15px] text-[#2a2d32]">
-                        {subject.boardName}
-                      </td>
-                      <td className="px-3 py-5 text-[15px] text-[#2a2d32]">
-                        {subject.boardGradeLabel}
-                      </td>
-                      <td className="px-3 py-5 text-[15px] text-[#2a2d32]">
-                        {subject.isOptional ? "Yes" : "No"}
-                      </td>
-                      <td className="px-3 py-5 text-right">
-                        <ActionMenu
-                          subjectName={subject.name}
-                          onEdit={() => openEditModal(subject)}
-                          onDelete={() => setDeleteTarget(subject)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <PaginationControls
-              className="mt-6"
-              rowsPerPage={pageSize}
-              rowsPerPageOptions={[10, 20, 50]}
-              onRowsPerPageChange={(nextPageSize) => {
-                setPageSize(nextPageSize);
-                setPage(1);
-              }}
-              rangeLabel={`${startRow}-${endRow} of ${totalSubjects}`}
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              hasPrev={pagination.hasPrev}
-              hasNext={pagination.hasNext}
-              onPrev={() => setPage((value) => Math.max(value - 1, 1))}
-              onNext={() =>
-                setPage((value) =>
-                  Math.min(value + 1, pagination.totalPages || value + 1)
-                )
-              }
-            />
-          </>
+          <PaginationControls
+            className="mt-6"
+            rowsPerPage={pageSize}
+            rowsPerPageOptions={[10, 20, 50]}
+            onRowsPerPageChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            rangeLabel={`${startRow}-${endRow} of ${totalSubjects}`}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasPrev={pagination.hasPrev}
+            hasNext={pagination.hasNext}
+            onPrev={() => setPage((value) => Math.max(value - 1, 1))}
+            onNext={() =>
+              setPage((value) =>
+                Math.min(value + 1, pagination.totalPages || value + 1)
+              )
+            }
+          />
         )}
       </section>
 
@@ -1151,13 +857,21 @@ export default function SubjectsPage() {
       )}
 
       {deleteTarget && (
-        <DeleteSubjectModal
-          subjectName={deleteTarget.name}
-          deleting={deleting}
+        <ConfirmDialog
+          title="Delete Subject"
+          message={
+            <>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#20242a]">
+                {deleteTarget.name}
+              </span>
+              ?
+            </>
+          }
+          confirmLabel="Delete"
+          busy={deleting}
           onCancel={() => {
-            if (!deleting) {
-              setDeleteTarget(null);
-            }
+            if (!deleting) setDeleteTarget(null);
           }}
           onConfirm={handleDeleteSubject}
         />
