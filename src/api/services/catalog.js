@@ -4,7 +4,7 @@ import api from "../axiosInstance";
 export async function fetchSubjects(params = {}) {
   const { data } = await api.get("/subject", { params });
   return data;
-}
+} 
 
 export async function fetchSubjectById(id) {
   const { data } = await api.get(`/subject/${id}`);
