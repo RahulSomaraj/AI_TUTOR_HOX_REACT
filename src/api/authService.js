@@ -31,6 +31,8 @@ export {
   uploadFile,
 } from "./services/catalog";
 
+export * from "./services/finance";
+
 // ─── Grades ─────────────────────────────────────────────────────────────────
 export async function fetchGrades() {
   const { data } = await api.get("/grades");

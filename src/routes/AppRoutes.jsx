@@ -17,8 +17,8 @@ import NotificationsPage from "../pages/NotificationsPage";
 import BannerPage from "../pages/BannerPage";
 
 import BoardGradesPage from "../pages/BoardGradesPage";
-
 import AttendancePage from "../pages/AttendancePage";
+import FeeManagementPage from "../pages/finance/FeeManagementPage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -53,6 +53,7 @@ function AppRoutes() {
           <Route path="parents" element={<ParentsPage />} />
           <Route path="banner" element={<BannerPage />} />
           <Route path="attendance" element={<AttendancePage />} />
+          <Route path="finance" element={<FeeManagementPage />} />
         </Route>
       </Route>
 
