@@ -24,7 +24,7 @@ import {
   X
 } from "lucide-react";
 
-const navItems = [
+const primaryNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Education Boards", icon: MonitorPlay, path: "/education-boards" },
   { label: "Schools", icon: School, path: "/schools" },
@@ -33,6 +33,9 @@ const navItems = [
   { label: "Teachers", icon: GraduationCap, path: "/teachers" },
   { label: "Parents", icon: Users, path: "/parents" },
   { label: "Students", icon: UserCheck, path: "/students" },
+];
+
+const secondaryNavItems = [
   { label: "Attendance", icon: CalendarCheck, path: "/attendance" },
   { label: "Subjects", icon: List, path: "/subjects" },
   { label: "Banner", icon: Image, path: "/banner" },
@@ -63,6 +66,33 @@ export default function Sidebar({ open = false, onClose }) {
   const go = (path) => {
     navigate(path);
     onClose?.(); // close the drawer after navigating on mobile
+  }
+
+  const renderNavItem = ({ label, icon: Icon, path }) => {
+    const isActive = isItemActive(path);
+    return (
+      <button
+        key={label}
+        type="button"
+        onClick={() => go(path)}
+        className={`flex w-full items-center gap-3 rounded-[8px] px-[14px] py-3 text-left transition-colors duration-150 ${
+          isActive ? "bg-[#23616E]" : "bg-transparent hover:bg-[#23616E]/10"
+        }`}
+      >
+        <Icon
+          size={18}
+          strokeWidth={1.75}
+          className={isActive ? "text-white" : "text-[#202224]"}
+        />
+        <span
+          className={`text-[13.5px] font-medium leading-none ${
+            isActive ? "text-white" : "text-[#202224]"
+          }`}
+        >
+          {label}
+        </span>
+      </button>
+    );
   }
 
   return (
@@ -101,32 +131,7 @@ export default function Sidebar({ open = false, onClose }) {
 
         {/* Navigation */}
         <nav className="flex flex-col gap-1 px-3">
-          {navItems.map(({ label, icon: Icon, path }) => {
-            const isActive = isItemActive(path);
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => go(path)}
-                className={`flex w-full items-center gap-3 rounded-[8px] px-[14px] py-3 text-left transition-colors duration-150 ${
-                  isActive ? "bg-[#23616E]" : "bg-transparent hover:bg-[#23616E]/10"
-                }`}
-              >
-                <Icon
-                  size={18}
-                  strokeWidth={1.75}
-                  className={isActive ? "text-white" : "text-[#202224]"}
-                />
-                <span
-                  className={`text-[13.5px] font-medium leading-none ${
-                    isActive ? "text-white" : "text-[#202224]"
-                  }`}
-                >
-                  {label}
-                </span>
-              </button>
-            );
-          })}
+          {primaryNavItems.map(renderNavItem)}
 
           {/* Fee Management group */}
           <div>
@@ -197,6 +202,8 @@ export default function Sidebar({ open = false, onClose }) {
               </div>
             )}
           </div>
+
+          {secondaryNavItems.map(renderNavItem)}
         </nav>
       </aside>
     </>

@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../app/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 // Client-side gate (UX only — the API remains the real authority). Reads auth
 // state from the centralized AuthContext instead of touching localStorage.

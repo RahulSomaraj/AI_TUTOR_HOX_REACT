@@ -1,19 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import {
-  clearSession,
-  getStoredUser,
-  isAuthenticated as hasToken,
-  setStoredUser,
-} from "../lib/session";
+import { useCallback, useEffect, useMemo, useState } from "react"; // Removed 'createContext' and 'useContext'
+import { clearSession, getStoredUser, isAuthenticated as hasToken, setStoredUser, } from "../lib/session";
 import { loginAndGetToken, adminLogout, fetchMyProfile } from "../api/services/auth";
 import logger from "../lib/logger";
 
-// Centralized auth/session state. Replaces scattered localStorage reads in
-// ProtectedRoute, Navbar, loginPage, and authService. Token persistence is still
-// localStorage-backed for now (see session.js); the Phase-2 move to httpOnly
-// cookies only needs to change session.js, not this context.
-const AuthContext = createContext(null);
+// 1. Import the shared context from your hooks folder
+import { AuthContext } from "../hooks/useAuth"; 
 
+// 2. This file now strictly exports ONE single React component. 
+// Fast Refresh is now 100% happy and will never throw a warning here.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStoredUser());
   const [authed, setAuthed] = useState(() => hasToken());
@@ -53,7 +47,6 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  // Keep context in sync if another tab logs out (clears the token).
   useEffect(() => {
     function onStorage() {
       setAuthed(hasToken());
@@ -70,11 +63,3 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
-  return ctx;
-}
-
-export default AuthContext;
