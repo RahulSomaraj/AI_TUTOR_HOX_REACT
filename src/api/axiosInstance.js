@@ -60,13 +60,14 @@ axiosInstance.interceptors.response.use(
 
     const is401 = error.response?.status === 401;
     const isRefreshRoute = original?.url?.includes("/refresh-token");
+    const isAuthRoute = /\/(login|refresh-token)\b/.test(original?.url ?? "");
     const alreadyRetried = original?._retry;
 
     // Don't attempt refresh if:
     //  - It wasn't a 401
     //  - The failing request WAS the refresh call (avoid infinite loop)
     //  - We've already retried this exact request once
-    if (!is401 || isRefreshRoute || alreadyRetried) {
+    if (!is401 || isAuthRoute || alreadyRetried) {
       if (is401 && isRefreshRoute) clearSessionAndRedirect();
       return Promise.reject(error);
     }

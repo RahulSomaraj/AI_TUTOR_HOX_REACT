@@ -6,8 +6,28 @@ import useOutsideClick from "../../hooks/useOutsideClick";
 // extra items can be supplied via `extraItems` = [{ label, icon, onClick, danger }].
 export default function ActionMenu({ label = "row", onEdit, onDelete, extraItems = [] }) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
   const ref = useRef(null);
+  const buttonRef = useRef(null);
   useOutsideClick(ref, () => setOpen(false));
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const MENU_WIDTH = 144;
+      const MENU_HEIGHT = 100;
+      const flipUp = rect.bottom + MENU_HEIGHT > window.innerHeight;
+      setCoords({
+        top: flipUp ? rect.top - MENU_HEIGHT - 8 : rect.bottom + 8,
+        left: rect.right - MENU_WIDTH,
+      });
+    }
+    setOpen(true);
+  };
 
   const run = (fn) => () => {
     setOpen(false);
@@ -17,8 +37,9 @@ export default function ActionMenu({ label = "row", onEdit, onDelete, extraItems
   return (
     <div className="relative inline-flex" ref={ref}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#20242a] transition hover:bg-[#eef6f9]"
         aria-label={`Open actions for ${label}`}
       >
@@ -26,7 +47,10 @@ export default function ActionMenu({ label = "row", onEdit, onDelete, extraItems
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg">
+        <div 
+          style={{ top: coords.top, left: coords.left }}
+          className="fixed z-50 w-36 overflow-hidden rounded-xl border border-[#e7ecef] bg-white shadow-lg"
+        >
           {onEdit && (
             <button
               type="button"
