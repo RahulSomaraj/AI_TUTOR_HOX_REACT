@@ -16,7 +16,7 @@ import { extractList, extractPagination, safeId } from "../api/normalize";
 import { fetchSchools } from "../api/services/schools";
 import {
   fetchAdminUsers, createTeacher, updateTeacher, deleteTeacher,
-} from "../api/authService";
+} from "../api/services/teachers";
 
 const DROPDOWN_LIMIT = 10;
 

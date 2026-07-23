@@ -4,7 +4,8 @@ import DatePickerModal from "./Datepickermodal";
 import { fetchClasses } from "../../api/services/grades";
 import { fetchSchools } from "../../api/services/schools";
 import { fetchAllStudents } from "../../api/services/students";
-import { fetchTeachers, createAttendance } from "../../api/authService";
+import { fetchTeachers } from "../../api/services/teachers";
+import { createAttendance } from "../../api/authService";
 
 //  Searchable dropdown 
 const SearchableSelect = ({ label, value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {

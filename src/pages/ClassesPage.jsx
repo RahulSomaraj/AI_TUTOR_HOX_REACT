@@ -11,8 +11,9 @@ import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
 import { fetchClasses, createClass, deleteClass, updateClass } from "../api/services/grades";
 import { fetchSchools } from "../api/services/schools";
+import { fetchTeachers } from "../api/services/teachers";
 import {
-  fetchBoardGrades, fetchTeachers, fetchBoards,
+  fetchBoardGrades, fetchBoards,
 } from "../api/authService";
 
 const DROPDOWN_LIMIT = 10;
