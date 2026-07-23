@@ -6,9 +6,9 @@ import AttendanceCalendar from "../components/Attendance/AttendanceCalendar";
 import AttendanceStats    from "../components/Attendance/AttendanceStats";
 import DatePickerModal    from "../components/Attendance/Datepickermodal";
 import AddAttendanceModal from "../components/Attendance/Addattendancemodal";
+import { fetchClasses } from "../api/services/grades";
 import {
   fetchSchools,
-  fetchClasses,
   fetchAttendance,
   exportAttendanceCsv,
 } from "../api/authService";

@@ -7,10 +7,10 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { fetchGrades } from "../api/services/grades";
 import {
   createSubject,
   fetchBoards,
-  fetchGrades,
   fetchSubjects,
   fetchSyllabi,
 } from "../api/authService";

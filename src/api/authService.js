@@ -33,22 +33,6 @@ export {
 
 export * from "./services/finance";
 
-// ─── Grades ─────────────────────────────────────────────────────────────────
-export async function fetchGrades() {
-  const { data } = await api.get("/grades");
-  return data;
-}
-
-export async function fetchGradeById(id) {
-  const { data } = await api.get(`/grades/${id}`);
-  return data;
-}
-
-export async function fetchStudentsByGrade(id, params = {}) {
-  const { data } = await api.get(`/users`, { params: { gradeId: id, ...params } });
-  return data;
-}
-
 // ─── Schools ─────────────────────────────────────────────────────────────────
 export async function fetchSchools(params = {}) {
   const { data } = await api.get("/school", { params });

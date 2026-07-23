@@ -13,9 +13,10 @@ import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
+import { fetchClasses } from "../api/services/grades";
 import {
   fetchAllStudents, createStudent, updateStudent,
-  deleteStudent, fetchSchools, fetchClasses,
+  deleteStudent, fetchSchools,
 } from "../api/authService";
 
 const DROPDOWN_LIMIT = 50;

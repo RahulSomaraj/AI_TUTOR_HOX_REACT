@@ -9,8 +9,8 @@ import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
+import { fetchClasses, createClass, deleteClass, updateClass } from "../api/services/grades";
 import {
-  fetchClasses, createClass, deleteClass, updateClass,
   fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards,
 } from "../api/authService";
 

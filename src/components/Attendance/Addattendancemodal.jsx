@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, ChevronDown, Check, Calendar } from "lucide-react";
 import DatePickerModal from "./Datepickermodal";
-import { fetchSchools, fetchClasses, fetchAllStudents, fetchTeachers, createAttendance } from "../../api/authService";
+import { fetchClasses } from "../../api/services/grades";
+import { fetchSchools, fetchAllStudents, fetchTeachers, createAttendance } from "../../api/authService";
 
 //  Searchable dropdown 
 const SearchableSelect = ({ label, value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {
