@@ -8,11 +8,11 @@ import {
   X,
 } from "lucide-react";
 import { fetchGrades } from "../api/services/grades";
+import { fetchSyllabi } from "../api/services/syllabus";
 import {
   createSubject,
   fetchBoards,
   fetchSubjects,
-  fetchSyllabi,
 } from "../api/authService";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
