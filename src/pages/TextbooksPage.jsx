@@ -12,10 +12,10 @@ import { extractList, extractPagination, safeId } from "../api/normalize";
 import {
   createTextbook,
   deleteTextbook,
-  fetchSubjects,
   fetchTextbooks,
   updateTextbook,
-} from "../api/authService";
+} from "../api/services/textbooks";
+import { fetchSubjects } from "../api/authService";
 
 const PAGE_SIZE = 10;
 

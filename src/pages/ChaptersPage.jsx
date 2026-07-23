@@ -21,8 +21,8 @@ import {
   fetchChapters,
   fetchTextbookById,
   updateChapter,
-  uploadFile,
-} from "../api/authService";
+} from "../api/services/textbooks";
+import { uploadFile } from "../api/authService";
 
 const PAGE_SIZE = 10;
 
