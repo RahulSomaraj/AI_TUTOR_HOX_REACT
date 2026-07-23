@@ -11,7 +11,8 @@ import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
 import SearchInput from "../components/ui/SearchInput";
 import { extractList } from "../api/normalize";
-import { fetchNotifications, sendNotification, uploadFile } from "../api/authService";
+import { fetchNotifications, sendNotification } from "../api/services/notifications";
+import { uploadFile } from "../api/authService";
 
 const CATEGORY_OPTIONS = [
   "Announcements",

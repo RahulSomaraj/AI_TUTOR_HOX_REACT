@@ -32,17 +32,6 @@ export {
 
 export * from "./services/finance";
 
-// ─── Notifications ───────────────────────────────────────────────────────────
-export async function sendNotification(payload) {
-  const { data } = await api.post("/notifications/send", payload);
-  return data;
-}
-
-export async function fetchNotifications(params = {}) {
-  const { data } = await api.get("/notifications", { params });
-  return data;
-}
-
 // ─── Parents ─────────────────────────────────────────────────────────────────
 export async function fetchParents(params = {}) {
   const { data } = await api.get("/parents", { params });
