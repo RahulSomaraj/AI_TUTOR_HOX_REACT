@@ -10,12 +10,12 @@ import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
+import { fetchSchools } from "../api/services/schools";
 import {
   fetchParents,
   createParent,
   updateParent,
   deleteParent,
-  fetchSchools,
   fetchStudentsForParent,
 } from "../api/authService";
 

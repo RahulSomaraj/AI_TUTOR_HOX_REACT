@@ -11,11 +11,10 @@ import { extractList, extractPagination, safeId } from "../api/normalize";
 import {
   createSchool,
   deleteSchool,
-  fetchBoards,
   fetchSchools,
   updateSchool,
-  uploadFile,
-} from "../api/authService";
+} from "../api/services/schools";
+import { fetchBoards, uploadFile } from "../api/authService";
 
 const PAGE_SIZE = 10;
 

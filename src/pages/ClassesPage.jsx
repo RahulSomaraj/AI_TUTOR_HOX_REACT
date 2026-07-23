@@ -10,8 +10,9 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
 import { fetchClasses, createClass, deleteClass, updateClass } from "../api/services/grades";
+import { fetchSchools } from "../api/services/schools";
 import {
-  fetchSchools, fetchBoardGrades, fetchTeachers, fetchBoards,
+  fetchBoardGrades, fetchTeachers, fetchBoards,
 } from "../api/authService";
 
 const DROPDOWN_LIMIT = 10;
