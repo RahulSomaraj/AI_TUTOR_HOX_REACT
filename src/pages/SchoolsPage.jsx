@@ -14,7 +14,7 @@ import {
   fetchSchools,
   updateSchool,
 } from "../api/services/schools";
-import { fetchBoards, uploadFile } from "../api/authService";
+import { fetchBoards, uploadFile } from "../api/services/catalog";
 
 const PAGE_SIZE = 10;
 

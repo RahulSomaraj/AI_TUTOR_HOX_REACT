@@ -18,7 +18,7 @@ import {
   deleteBoardGrade,
   fetchBoardGrades,
   updateBoardGrade,
-} from "../api/authService";
+} from "../api/services/catalog";
 
 function mapGradeRow(grade) {
   return {

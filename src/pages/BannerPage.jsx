@@ -4,7 +4,7 @@ import { X, Loader2, Upload } from "lucide-react";
 import {
   fetchBanners, createBanner, updateBanner, deleteBanner,
 } from "../api/services/banners";
-import { uploadFile } from "../api/authService";
+import { uploadFile } from "../api/services/catalog";
 import PageHeader from "../components/ui/PageHeader";
 import SearchInput from "../components/ui/SearchInput";
 import DataTable from "../components/ui/DataTable";

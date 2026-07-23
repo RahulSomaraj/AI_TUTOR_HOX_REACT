@@ -13,7 +13,7 @@ import {
   deleteBoard,
   fetchBoards,
   updateBoard,
-} from "../api/authService";
+} from "../api/services/catalog";
 
 function mapBoardRow(board) {
   return {

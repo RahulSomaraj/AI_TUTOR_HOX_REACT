@@ -12,7 +12,7 @@ import PageHeader from "../components/ui/PageHeader";
 import SearchInput from "../components/ui/SearchInput";
 import { extractList } from "../api/normalize";
 import { fetchNotifications, sendNotification } from "../api/services/notifications";
-import { uploadFile } from "../api/authService";
+import { uploadFile } from "../api/services/catalog";
 
 const CATEGORY_OPTIONS = [
   "Announcements",

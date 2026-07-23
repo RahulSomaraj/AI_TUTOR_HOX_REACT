@@ -14,7 +14,7 @@ import { fetchSchools } from "../api/services/schools";
 import { fetchTeachers } from "../api/services/teachers";
 import {
   fetchBoardGrades, fetchBoards,
-} from "../api/authService";
+} from "../api/services/catalog";
 
 const DROPDOWN_LIMIT = 10;
 

@@ -22,7 +22,7 @@ import {
   fetchTextbookById,
   updateChapter,
 } from "../api/services/textbooks";
-import { uploadFile } from "../api/authService";
+import { uploadFile } from "../api/services/catalog";
 
 const PAGE_SIZE = 10;
 

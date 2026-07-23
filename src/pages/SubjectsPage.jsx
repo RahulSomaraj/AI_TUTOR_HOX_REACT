@@ -14,7 +14,7 @@ import {
   fetchBoards,
   updateSubject,
   uploadFile,
-} from "../api/authService";
+} from "../api/services/catalog";
 import { extractList, safeId } from "../api/normalize";
 import {
   useDeleteSubject,

@@ -22,7 +22,7 @@ import {
   fetchTopics,
   updateTopic,
 } from "../api/services/topics";
-import { uploadFile } from "../api/authService";
+import { uploadFile } from "../api/services/catalog";
 
 const PAGE_SIZE = 10;
 

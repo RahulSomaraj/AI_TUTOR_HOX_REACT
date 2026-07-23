@@ -13,7 +13,7 @@ import {
   createSubject,
   fetchBoards,
   fetchSubjects,
-} from "../api/authService";
+} from "../api/services/catalog";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
 import SearchInput from "../components/ui/SearchInput";

@@ -15,7 +15,7 @@ import {
   fetchTextbooks,
   updateTextbook,
 } from "../api/services/textbooks";
-import { fetchSubjects } from "../api/authService";
+import { fetchSubjects } from "../api/services/catalog";
 
 const PAGE_SIZE = 10;
 

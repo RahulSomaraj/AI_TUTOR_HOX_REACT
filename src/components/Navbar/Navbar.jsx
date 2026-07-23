@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, Menu, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { deleteAdminAccount } from "../../api/authService";
+import { deleteAdminAccount } from "../../api/services/auth";
 import { useAuth } from "../../hooks/useAuth";
 import logger from "../../lib/logger";
 
