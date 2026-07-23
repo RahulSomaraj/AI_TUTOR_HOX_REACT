@@ -5,7 +5,7 @@ import { fetchClasses } from "../../api/services/grades";
 import { fetchSchools } from "../../api/services/schools";
 import { fetchAllStudents } from "../../api/services/students";
 import { fetchTeachers } from "../../api/services/teachers";
-import { createAttendance } from "../../api/authService";
+import { createAttendance } from "../../api/services/attendance";
 
 //  Searchable dropdown 
 const SearchableSelect = ({ label, value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {

@@ -11,7 +11,7 @@ import { fetchSchools } from "../api/services/schools";
 import {
   fetchAttendance,
   exportAttendanceCsv,
-} from "../api/authService";
+} from "../api/services/attendance";
 
 const toDateStr = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
