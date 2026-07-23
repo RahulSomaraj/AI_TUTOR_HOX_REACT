@@ -17,7 +17,7 @@ import {
   createParent,
   updateParent,
   deleteParent,
-} from "../api/authService";
+} from "../api/services/parents";
 
 //  Fetch all pages helper
 const DROPDOWN_LIMIT = 50;
