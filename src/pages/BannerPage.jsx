@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import PaginationControls from "../components/PaginationControls";
 import { X, Loader2, Upload } from "lucide-react";
 import {
-  fetchBanners, createBanner, updateBanner, deleteBanner, uploadFile,
-} from "../api/authService";
+  fetchBanners, createBanner, updateBanner, deleteBanner,
+} from "../api/services/banners";
+import { uploadFile } from "../api/authService";
 import PageHeader from "../components/ui/PageHeader";
 import SearchInput from "../components/ui/SearchInput";
 import DataTable from "../components/ui/DataTable";
