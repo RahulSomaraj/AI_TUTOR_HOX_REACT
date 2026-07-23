@@ -18,7 +18,7 @@ import { fetchSchools } from "../api/services/schools";
 import {
   fetchAllStudents, createStudent, updateStudent,
   deleteStudent,
-} from "../api/authService";
+} from "../api/services/students";
 
 const DROPDOWN_LIMIT = 50;
 

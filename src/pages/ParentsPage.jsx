@@ -11,12 +11,12 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
 import { fetchSchools } from "../api/services/schools";
+import { fetchStudentsForParent } from "../api/services/students";
 import {
   fetchParents,
   createParent,
   updateParent,
   deleteParent,
-  fetchStudentsForParent,
 } from "../api/authService";
 
 //  Fetch all pages helper

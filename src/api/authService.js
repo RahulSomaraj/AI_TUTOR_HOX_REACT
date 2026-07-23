@@ -3,7 +3,6 @@
 // domain services under `./services/`. New code should import from the specific
 // service module; existing imports here keep working unchanged.
 import api from "./axiosInstance";
-import logger from "../lib/logger";
 
 // ─── Re-exported from split services ────────────────────────────────────────
 export {
@@ -36,60 +35,6 @@ export * from "./services/finance";
 // ─── Admin users ─────────────────────────────────────────────────────────────
 export async function fetchAdminUsers(params = {}) {
   const { data } = await api.get("/admin/users", { params });
-  return data;
-}
-
-// ─── Students (users) ────────────────────────────────────────────────────────
-export async function fetchAllStudents(params = {}) {
-  const { data } = await api.get("/users", { params });
-  return data;
-}
-
-export async function fetchStudentById(id) {
-  const { data } = await api.get(`/users/${id}`);
-  return data?.data ?? data;
-}
-
-export async function createStudent(payload) {
-  logger.debug("Submitting student payload:", payload);
-  const { data } = await api.post("/users", payload);
-  return data;
-}
-
-export async function deleteStudent(id) {
-  const { data } = await api.delete(`/users/${id}`);
-  return data;
-}
-
-export async function updateStudent(id, payload) {
-  const { data } = await api.put(`/users/${id}`, payload);
-  return data;
-}
-
-export async function fetchStudentsForParent(params = {}) {
-  const { schoolId } = params;
-  const { data } = await api.get("/users", { params: { schoolId: Number(schoolId) } });
-  return data;
-}
-
-// ─── Classes (grades) ────────────────────────────────────────────────────────
-export async function fetchClasses(params = {}) {
-  const { data } = await api.get("/grades", { params });
-  return data;
-}
-
-export async function createClass(payload) {
-  const { data } = await api.post("/grades", payload);
-  return data;
-}
-
-export async function updateClass(id, payload) {
-  const { data } = await api.patch(`/grades/${id}`, payload);
-  return data;
-}
-
-export async function deleteClass(id) {
-  const { data } = await api.delete(`/grades/${id}`);
   return data;
 }
 
