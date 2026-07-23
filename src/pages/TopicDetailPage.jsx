@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Pencil } from "lucide-react";
-import { updateTopicConcept } from "../api/authService";
+import { updateTopicConcept } from "../api/services/topics";
 
 function ConceptEditModal({ topic, onClose, onSuccess }) {
   const [concept, setConcept] = useState(topic.concept ?? "");

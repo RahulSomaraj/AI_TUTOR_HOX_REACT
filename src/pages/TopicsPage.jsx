@@ -21,8 +21,8 @@ import {
   deleteTopic,
   fetchTopics,
   updateTopic,
-  uploadFile,
-} from "../api/authService";
+} from "../api/services/topics";
+import { uploadFile } from "../api/authService";
 
 const PAGE_SIZE = 10;
 
