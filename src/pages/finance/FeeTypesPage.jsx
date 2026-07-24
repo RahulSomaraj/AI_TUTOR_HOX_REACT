@@ -12,7 +12,8 @@ import { safeId } from "../../api/normalize";
 import {
     useDeleteFeeType,
     useFeeTypesQuery,
-    useInvalidateFeeTypes
+    useInvalidateFeeTypes,
+    useToggleFeeType
 } from "../../features/finance/useFeeTypes";
 
 const PAGE_SIZE = 10;

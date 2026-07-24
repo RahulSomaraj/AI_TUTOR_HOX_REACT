@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteFeeType, fetchFeeTypes } from "../../api/services/finance";
+import { deleteFeeType, fetchFeeTypes, updateFeeType } from "../../api/services/finance";
 import { extractList } from "../../api/normalize";
 
 const FEE_TYPES_ROOT = "feeTypes";
@@ -53,6 +53,14 @@ export function useDeleteFeeType() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => deleteFeeType(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [FEE_TYPES_ROOT] }),
+  });
+}
+
+export function useToggleFeeType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (row) => updateFeeType(row.id, { isActive: !row.isActive }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [FEE_TYPES_ROOT] }),
   });
 }
