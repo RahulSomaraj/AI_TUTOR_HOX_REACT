@@ -20,3 +20,28 @@ export async function deleteFeeType(id) {
     return data;
 }
 
+// ─── Fee structures ─────────────────────────────────────────────────────────
+export async function fetchFeeStructures(params = {}) {
+    const { data } = await api.get('/fee-structures', { params });
+    return data;
+}
+
+export async function fetchFeeStructureById(id) {
+    const { data } = await api.get(`/fee-structures/${id}`);
+    return data;
+};
+
+export async function createFeeStructure(payload) {
+    const { data } = await api.post('/fee-structures', payload);
+    return data;
+}
+
+export async function updateFeeStructure(id, payload) {
+    const { data } = await api.put(`/fee-structures/${id}`, payload);
+    return data;
+};
+
+export async function deleteFeeStructure(id) {
+    const { data } = await api.delete(`/fee-structures/${id}`);
+    return data;
+}

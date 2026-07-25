@@ -10,7 +10,7 @@ import useDebounce from "../../hooks/useDebounce";
  */
 export default function SearchableSelect({
   value,
-  onChange,
+  onChange, 
   onSearch,
   options = [],
   placeholder = "Select",

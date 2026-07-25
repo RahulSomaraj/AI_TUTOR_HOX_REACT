@@ -6,7 +6,7 @@
 // still visible in production.
 const isDev = import.meta.env.DEV;
 
-export const logger = {
+const logger = {
   log: (...args) => {
     if (isDev) console.log(...args);
   },

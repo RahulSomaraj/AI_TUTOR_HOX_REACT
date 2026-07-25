@@ -12,7 +12,7 @@ export const DEFAULT_PAGE_SIZE = 10;
  * @param {*} response raw response body
  * @param {string[]} keys candidate keys that may hold the array
  */
-export function extractList(response, keys = []) {
+export function  extractList(response, keys = []) {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.data)) return response.data;
 

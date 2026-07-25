@@ -1,0 +1,53 @@
+[1mdiff --git a/src/api/normalize.js b/src/api/normalize.js[m
+[1mindex 0fc6d19..7d1d43b 100644[m
+[1m--- a/src/api/normalize.js[m
+[1m+++ b/src/api/normalize.js[m
+[36m@@ -12,7 +12,7 @@[m [mexport const DEFAULT_PAGE_SIZE = 10;[m
+  * @param {*} response raw response body[m
+  * @param {string[]} keys candidate keys that may hold the array[m
+  */[m
+[31m-export function extractList(response, keys = []) {[m
+[32m+[m[32mexport function  extractList(response, keys = []) {[m
+   if (Array.isArray(response)) return response;[m
+   if (Array.isArray(response?.data)) return response.data;[m
+ [m
+[1mdiff --git a/src/components/ui/SearchableSelect.jsx b/src/components/ui/SearchableSelect.jsx[m
+[1mindex d0129f2..6eeebc8 100644[m
+[1m--- a/src/components/ui/SearchableSelect.jsx[m
+[1m+++ b/src/components/ui/SearchableSelect.jsx[m
+[36m@@ -10,7 +10,7 @@[m [mimport useDebounce from "../../hooks/useDebounce";[m
+  */[m
+ export default function SearchableSelect({[m
+   value,[m
+[31m-  onChange,[m
+[32m+[m[32m  onChange,[m[41m [m
+   onSearch,[m
+   options = [],[m
+   placeholder = "Select",[m
+[36m@@ -126,4 +126,4 @@[m [mexport default function SearchableSelect({[m
+       )}[m
+     </div>[m
+   );[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/src/hooks/useDebounce.js b/src/hooks/useDebounce.js[m
+[1mindex 6505ad2..c41a26b 100644[m
+[1m--- a/src/hooks/useDebounce.js[m
+[1m+++ b/src/hooks/useDebounce.js[m
+[36m@@ -11,4 +11,4 @@[m [mexport default function useDebounce(value, delay = 350) {[m
+   }, [delay, value]);[m
+ [m
+   return debouncedValue;[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/src/hooks/useOutsideClick.js b/src/hooks/useOutsideClick.js[m
+[1mindex d160c87..1ec1095 100644[m
+[1m--- a/src/hooks/useOutsideClick.js[m
+[1m+++ b/src/hooks/useOutsideClick.js[m
+[36m@@ -13,3 +13,4 @@[m [mexport default function useOutsideClick(ref, onOutside) {[m
+     return () => document.removeEventListener("mousedown", handleClick);[m
+   }, [onOutside, ref]);[m
+ }[m
+[41m+[m
