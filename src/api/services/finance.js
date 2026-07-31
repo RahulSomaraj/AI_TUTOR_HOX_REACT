@@ -20,6 +20,11 @@ export async function deleteFeeType(id) {
     return data;
 }
 
+export async function fetchAcademicYears(params = {}) {
+    const { data } = await api.get('/academic-years', { params });
+    return data;
+}
+
 // ─── Fee structures ─────────────────────────────────────────────────────────
 export async function fetchFeeStructures(params = {}) {
     const { data } = await api.get('/fee-structures', { params });

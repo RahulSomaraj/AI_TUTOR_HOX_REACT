@@ -1,23 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     deleteFeeStructure,
-    fetchFeeStructures
+    fetchFeeStructures,
+    createFeeStructure,
+    updateFeeStructure,
+    fetchAcademicYears
 } from "../../api/services/finance";
 import { extractList } from "../../api/normalize";
 
 const FEE_STRUCTURES_ROOT = "feeStructures";
 export const feeStructuresKey = (params) => [FEE_STRUCTURES_ROOT, params];
 
-export function selectFeeStructures(all, { page, limit, search, schoolId }) {
+export function selectFeeStructures(all, { page, limit, search }) {
   const term = search?.trim().toLowerCase();
   const filtered = all.filter((item) => {
-    const matchesTerm = term
-      ? item?.name?.toLowerCase().includes(term)
-      : true;
-    const matchesSchool = schoolId
-      ? String(item?.schoolId ?? item?.school?.id) === String(schoolId)
-      : true;
-    return matchesTerm && matchesSchool;
+    if (!term) return true;
+    return (
+      item?.feeType?.name?.toLowerCase().includes(term) ||
+      item?.feeType?.code?.toLowerCase().includes(term) ||
+      item?.academicYear?.name?.toLowerCase().includes(term)
+    );
   });
 
   const totalCount = filtered.length;
@@ -60,6 +62,36 @@ export function useDeleteFeeStructure() {
     return useMutation({
         mutationFn: (id) => deleteFeeStructure(id),
         onSuccess: () =>
-            queryClient.invalidateQueries({ queryKey: [FEE_STRUCTURES_ROOT] });
+            queryClient.invalidateQueries({ queryKey: [FEE_STRUCTURES_ROOT] })
     });
+}
+
+export function useSaveFeeStructure() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }) =>
+      id ? updateFeeStructure(id, payload) : createFeeStructure(payload),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: [FEE_STRUCTURES_ROOT] })
+  });
+}
+
+export function useToggleFeeStructure() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (row) => updateFeeStructure(row.id, { isActive: !row.isActive }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [FEE_STRUCTURES_ROOT] }),
+  });
+}
+
+// Full academic-year list (with nested school) for the Fee Structure form's picker.
+export function useAcademicYearOptionsQuery() {
+  return useQuery({
+    queryKey: ["academicYears", "options"],
+    queryFn: async () => {
+      const response = await fetchAcademicYears({ limit: 50 });
+      return extractList(response, ["academicYears"]);
+    },
+    staleTime: 60_000,
+  });
 }

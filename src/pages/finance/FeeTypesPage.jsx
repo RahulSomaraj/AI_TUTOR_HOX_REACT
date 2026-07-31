@@ -212,6 +212,20 @@ export default function FeeTypesPage() {
     const invalidateFeeTypes = useInvalidateFeeTypes();
     const deleteFeeTypeMutation = useDeleteFeeType();
     const deleting = deleteFeeTypeMutation.isPending;
+    const toggleFeeTypeMutation = useToggleFeeType();
+    const togglingId = toggleFeeTypeMutation.isPending
+      ? toggleFeeTypeMutation.variables?.id
+      : null;
+
+    async function handleToggle(row) {
+      setActionError("");
+      try {
+        await toggleFeeTypeMutation.mutateAsync(row)
+      } catch (error) {
+        setActionError(apiError(error, "Failed to update toggle status"));
+      }
+    }
+
 
     const debouncedSearch = useDebounce(search, 300);
 
@@ -288,11 +302,19 @@ export default function FeeTypesPage() {
             key: "status",
             header: "Status",
             render: (row) => (
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${ row.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500" }`}
-                >
-                    {row.isActive ? "Active" : "Inactive"}
-                </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={row.isActive}
+                disabled={togglingId === row.id}
+                onClick={() => handleToggle(row)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${ row.isActive ? "bg-emerald-500" : "bg-slate-300" }`}
+                aria-label={`${row.isActive ? "Deactivate" : "Activate"} ${row.name}`}
+              >
+                <span 
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${ row.isActive ? "translate-x-6" : "translate-x-1" }`}
+                />
+              </button>
             )
         },
         {

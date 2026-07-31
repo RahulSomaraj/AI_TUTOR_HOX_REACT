@@ -44,6 +44,18 @@ export function useFeeTypesQuery(params) {
   });
 }
 
+// Full active fee-type list for pickers (e.g. the Fee Structure form) — not paginated.
+export function useFeeTypeOptionsQuery() {
+  return useQuery({
+    queryKey: [FEE_TYPES_ROOT, "options"],
+    queryFn: async () => {
+      const response = await fetchFeeTypes();
+      return extractList(response, ["feeTypes"]).filter((item) => item?.isActive !== false);
+    },
+    staleTime: 60_000,
+  });
+}
+
 export function useInvalidateFeeTypes() {
   const queryClient = useQueryClient();
   return () => queryClient.invalidateQueries({ queryKey: [FEE_TYPES_ROOT] });

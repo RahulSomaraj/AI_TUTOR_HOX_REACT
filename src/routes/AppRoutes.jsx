@@ -20,6 +20,7 @@ import BoardGradesPage from "../pages/BoardGradesPage";
 import AttendancePage from "../pages/AttendancePage";
 import FeeManagementPage from "../pages/finance/FeeManagementPage";
 import FeeTypesPage from "../pages/finance/FeeTypesPage";
+import FeeStructurePage from "../pages/finance/FeeStructurePage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -56,6 +57,7 @@ function AppRoutes() {
           <Route path="attendance" element={<AttendancePage />} />
           <Route path="finance" element={<FeeManagementPage />} />
           <Route path="finance/fee-types" element={<FeeTypesPage />}/>
+          <Route path="finance/fee-structures" element={<FeeStructurePage />} />
         </Route>
       </Route>
 
