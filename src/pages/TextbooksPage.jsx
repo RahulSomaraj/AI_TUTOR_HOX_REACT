@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, Eye, Loader2 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -510,6 +511,7 @@ export default function TextbooksPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb items={[{ label: "Syllabus" }]} />
       <PageHeader
         title="Syllabus"
         subtitle={`${totalTextbooks} Syllabus`}

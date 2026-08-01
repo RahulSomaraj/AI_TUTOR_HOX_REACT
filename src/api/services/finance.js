@@ -20,11 +20,6 @@ export async function deleteFeeType(id) {
     return data;
 }
 
-export async function fetchAcademicYears(params = {}) {
-    const { data } = await api.get('/academic-years', { params });
-    return data;
-}
-
 // ─── Fee structures ─────────────────────────────────────────────────────────
 export async function fetchFeeStructures(params = {}) {
     const { data } = await api.get('/fee-structures', { params });
@@ -48,5 +43,52 @@ export async function updateFeeStructure(id, payload) {
 
 export async function deleteFeeStructure(id) {
     const { data } = await api.delete(`/fee-structures/${id}`);
+    return data;
+}
+
+// ─── Class fees (fee structure ↔ grade) ─────────────────────────────────────
+export async function fetchClassFees(params = {}) {
+    const { data } = await api.get('/class-fees', { params });
+    return data;
+}
+
+export async function fetchClassFeesByGrade(gradeId) {
+    const { data } = await api.get(`/class-fees/grade/${gradeId}`);
+    return data;
+}
+
+export async function createClassFee(payload) {
+    const { data } = await api.post('/class-fees', payload);
+    return data;
+}
+
+export async function deleteClassFee(id) {
+    const { data } = await api.delete(`/class-fees/${id}`);
+    return data;
+}
+
+// ─── Student fees (class fee ↔ student) ─────────────────────────────────────
+export async function fetchStudentFees(params = {}) {
+    const { data } = await api.get('/student-fees', { params });
+    return data;
+}
+
+export async function fetchStudentFeesByStudent(studentId) {
+    const { data } = await api.get(`/student-fees/student/${studentId}`);
+    return data;
+}
+
+export async function createStudentFee(payload) {
+    const { data } = await api.post('/student-fees', payload);
+    return data;
+}
+
+export async function bulkAssignStudentFee(payload) {
+    const { data } = await api.post('/student-fees/bulk-assign', payload);
+    return data;
+}
+
+export async function deleteStudentFee(id) {
+    const { data } = await api.delete(`/student-fees/${id}`);
     return data;
 }

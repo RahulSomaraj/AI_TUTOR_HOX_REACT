@@ -4,11 +4,6 @@ import {
   LayoutDashboard,
   MonitorPlay,
   School,
-  BookOpen,
-  GraduationCap,
-  Users,
-  UserCheck,
-  CalendarCheck,
   List,
   BookMarked,
   Image,
@@ -27,16 +22,11 @@ import {
 const primaryNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Education Boards", icon: MonitorPlay, path: "/education-boards" },
-  { label: "Schools", icon: School, path: "/schools" },
-  { label: "Classes", icon: BookOpen, path: "/classes" },
+  { label: "Institution Management", icon: School, path: "/schools" },
   { label: "Syllabus", icon: BookMarked, path: "/syllabus" },
-  { label: "Teachers", icon: GraduationCap, path: "/teachers" },
-  { label: "Parents", icon: Users, path: "/parents" },
-  { label: "Students", icon: UserCheck, path: "/students" },
 ];
 
 const secondaryNavItems = [
-  { label: "Attendance", icon: CalendarCheck, path: "/attendance" },
   { label: "Subjects", icon: List, path: "/subjects" },
   { label: "Banner", icon: Image, path: "/banner" },
   { label: "Notifications", icon: Bell, path: "/notifications" },

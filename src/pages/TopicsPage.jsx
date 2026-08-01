@@ -15,6 +15,7 @@ import SearchInput from "../components/ui/SearchInput";
 import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import { extractList, extractPagination } from "../api/normalize";
 import {
   createTopic,
@@ -731,6 +732,7 @@ export default function TopicsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const chapter = location.state?.chapter ?? null;
+  const textbook = location.state?.textbook ?? null;
 
   const [topics, setTopics] = useState([]);
   const [pagination, setPagination] = useState({
@@ -860,6 +862,13 @@ export default function TopicsPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb
+        items={[
+          { label: "Syllabus", path: "/syllabus" },
+          { label: textbook?.title ?? "Textbook", path: `/syllabus/${textbookId}/chapters` },
+          { label: chapter?.title ?? "Topics" },
+        ]}
+      />
       <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3">

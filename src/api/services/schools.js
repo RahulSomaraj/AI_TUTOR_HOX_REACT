@@ -6,6 +6,11 @@ export async function fetchSchools(params = {}) {
   return data;
 }
 
+export async function fetchSchoolById(id) {
+  const { data } = await api.get(`/school/${id}`);
+  return data;
+}
+
 export async function createSchool(payload) {
   const { data } = await api.post("/school", payload);
   return data;

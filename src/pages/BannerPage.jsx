@@ -6,6 +6,7 @@ import {
 } from "../api/services/banners";
 import { uploadFile } from "../api/services/catalog";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import SearchInput from "../components/ui/SearchInput";
 import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
@@ -328,6 +329,7 @@ export default function BannerPage() {
 
   return (
     <div className="ty-page-shell flex flex-col">
+      <Breadcrumb items={[{ label: "Banner" }]} />
 
       {/* ── Modals ── */}
       {showAdd && (

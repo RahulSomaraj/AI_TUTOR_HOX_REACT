@@ -35,7 +35,7 @@ export default function SchoolScopeSelect({
         page: 1,
         limit: DROPDOWN_LIMIT,
         order: "desc",
-        name: query.trim() || undefined,
+        schoolName: query.trim() || undefined,
       });
       setSchools(extractList(response, ["schools"]).map(mapSchoolOption));
     } catch (err) {

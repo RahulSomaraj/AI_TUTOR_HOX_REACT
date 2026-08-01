@@ -2,6 +2,7 @@ import { ClipboardList, Trophy, UserCheck, Users } from "lucide-react";
 import QuickActions from "../components/Dashboard/QuickActions";
 import StatCard from "../components/Dashboard/StatCard";
 import UpcomingTasks from "../components/Dashboard/UpcomingTasks";
+import Breadcrumb from "../components/ui/Breadcrumb";
 
 function Dashboard() {
   const stats = [
@@ -37,6 +38,7 @@ function Dashboard() {
 
   return (
     <section className="ty-page-shell space-y-6">
+      <Breadcrumb items={[]} />
       <h1 className="ty-page-title">Dashboard</h1>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -12,10 +12,12 @@ import {
 import PaginationControls from "../components/PaginationControls";
 import SearchInput from "../components/ui/SearchInput";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import { extractList, extractPagination } from "../api/normalize";
 import {
   createBoardGrade,
   deleteBoardGrade,
+  fetchBoardById,
   fetchBoardGrades,
   updateBoardGrade,
 } from "../api/services/catalog";
@@ -372,7 +374,7 @@ export default function BoardGradesPage() {
   const location = useLocation();
   const boardFromState = location.state?.board ?? null;
 
-  const [board] = useState(boardFromState);
+  const [board, setBoard] = useState(boardFromState);
   const [grades, setGrades] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -392,6 +394,27 @@ export default function BoardGradesPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+
+  useEffect(() => {
+    if (board || !boardId) return;
+
+    let cancelled = false;
+
+    async function loadBoard() {
+      try {
+        const response = await fetchBoardById(boardId);
+        const boardData = response?.data ?? response;
+        if (!cancelled) setBoard(boardData);
+      } catch (err) {
+        console.error("Failed to load board details:", err);
+      }
+    }
+
+    loadBoard();
+    return () => {
+      cancelled = true;
+    };
+  }, [board, boardId]);
 
   const queryParams = useMemo(
     () => ({
@@ -490,8 +513,17 @@ export default function BoardGradesPage() {
     }
   }
 
+  const boardName = board?.name ?? board?.boardName ?? null;
+
   return (
     <div className="ty-page-shell">
+      <Breadcrumb
+        items={[
+          { label: "Education Boards", path: "/education-boards" },
+          { label: boardName ?? "Board Grades" },
+        ]}
+      />
+
       {/* Header */}
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
@@ -504,7 +536,7 @@ export default function BoardGradesPage() {
           </button>
           <div>
             <h1 className="ty-page-title">
-              Board Grades
+              {boardName ? `${boardName} — Grades` : "Board Grades"}
             </h1>
             <p className="mt-2 ty-subtitle">
               {totalGrades} Board Grades

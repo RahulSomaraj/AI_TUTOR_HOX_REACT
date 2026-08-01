@@ -8,6 +8,7 @@ import {
     BarChart3
 } from "lucide-react";
 import PageHeader from "../../components/ui/PageHeader";
+import Breadcrumb from "../../components/ui/Breadcrumb";
 
 const sections = [
     { label: "Fee Types", desc: "Define fee categories (Tuition, Admission, Exam...).", icon: Tag, path: "/finance/fee-types" },
@@ -21,7 +22,8 @@ const sections = [
 export default function FeeManagementPage() {
     return (
         <div className="ty-page-shell">
-            <PageHeader 
+            <Breadcrumb items={[{ label: "Fee Management" }]} />
+            <PageHeader
                 title="Fee Management"
                 subtitle="Set up fees, collect payments, and track student accounts."
             />

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageIcon, Loader2, X } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -739,6 +740,7 @@ export default function SubjectsPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb items={[{ label: "Subjects" }]} />
       <PageHeader
         title="Subjects"
         subtitle={`${totalSubjects} Subjects`}

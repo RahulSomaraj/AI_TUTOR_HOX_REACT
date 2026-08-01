@@ -32,6 +32,11 @@ export async function fetchBoards(params = {}) {
   return data;
 }
 
+export async function fetchBoardById(id) {
+  const { data } = await api.get(`/education-board/${id}`);
+  return data;
+}
+
 export async function createBoard(payload) {
   const { data } = await api.post("/education-board", payload);
   return data;

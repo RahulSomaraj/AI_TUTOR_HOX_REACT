@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search, ChevronDown,
   Loader2, Eye, EyeOff, X,
@@ -6,6 +7,8 @@ import {
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
+import { useSchoolQuery } from "../features/schools/useSchool";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -453,13 +456,15 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
 const ITEMS_PER_PAGE = 10;
 
 export default function StudentsPage() {
+  const [searchParams] = useSearchParams();
   const [students, setStudents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [search, setSearch] = useState("");
-  const [filterSchoolId, setFilterSchoolId] = useState("");
+  const [filterSchoolId, setFilterSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  const scopedSchoolQuery = useSchoolQuery(filterSchoolId);
   const debouncedSearch = useDebounce(search, 400);
 
   const [loading, setLoading] = useState(false);
@@ -596,6 +601,18 @@ export default function StudentsPage() {
           }}
         />
       )}
+
+      <Breadcrumb
+        items={
+          filterSchoolId
+            ? [
+                { label: "Institution Management", path: "/schools" },
+                { label: scopedSchoolQuery.data?.schoolName ?? "Institution", path: `/schools/${filterSchoolId}` },
+                { label: "Students" },
+              ]
+            : [{ label: "Students" }]
+        }
+      />
 
       {/* Header: title + count + button  */}
       <PageHeader

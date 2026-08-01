@@ -14,6 +14,7 @@ import SearchInput from "../components/ui/SearchInput";
 import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import { extractList, extractPagination } from "../api/normalize";
 import {
   createChapter,
@@ -790,6 +791,12 @@ export default function ChaptersPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb
+        items={[
+          { label: "Syllabus", path: "/syllabus" },
+          { label: textbook?.title ?? "Chapters" },
+        ]}
+      />
       <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3">

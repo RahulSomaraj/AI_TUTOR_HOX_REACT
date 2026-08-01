@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, ChevronDown, Trash2, Loader2, X, Eye, EyeOff } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
+import { useSchoolQuery } from "../features/schools/useSchool";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import SchoolScopeSelect from "../components/Finance/SchoolScopeSelect";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
 import { fetchSchools } from "../api/services/schools";
@@ -546,6 +550,7 @@ function ParentModal({ initialData = null, onClose, onSuccess }) {
 const ITEMS_PER_PAGE = 10;
 
 export default function ParentsPage() {
+  const [searchParams] = useSearchParams();
   const [parents, setParents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -554,6 +559,8 @@ export default function ParentsPage() {
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
+  const [filterSchoolId, setFilterSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  const scopedSchoolQuery = useSchoolQuery(filterSchoolId);
 
   const [loading, setLoading] = useState(false);
 
@@ -567,6 +574,7 @@ export default function ParentsPage() {
     try {
       const params = { page, limit: itemsPerPage };
       if (debouncedSearch.trim()) params.name = debouncedSearch.trim();
+      if (filterSchoolId) params.schoolId = Number(filterSchoolId);
 
       const res = await fetchParents(params);
       const list = Array.isArray(res?.data) ? res.data : [];
@@ -582,7 +590,7 @@ export default function ParentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, itemsPerPage, debouncedSearch]);
+  }, [page, itemsPerPage, debouncedSearch, filterSchoolId]);
 
   useEffect(() => {
     loadParents();
@@ -651,6 +659,18 @@ export default function ParentsPage() {
         />
       )}
 
+      <Breadcrumb
+        items={
+          filterSchoolId
+            ? [
+                { label: "Institution Management", path: "/schools" },
+                { label: scopedSchoolQuery.data?.schoolName ?? "Institution", path: `/schools/${filterSchoolId}` },
+                { label: "Parents" },
+              ]
+            : [{ label: "Parents" }]
+        }
+      />
+
       {/* Header */}
       <PageHeader
         title="Parents"
@@ -664,7 +684,7 @@ export default function ParentsPage() {
       />
 
       {/* Search card */}
-      <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center">
+      <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
         <SearchInput
           value={search}
           onChange={(next) => {
@@ -673,6 +693,16 @@ export default function ParentsPage() {
           }}
           placeholder="Search parents by name..."
         />
+
+        <div className="w-full lg:w-[220px]">
+          <SchoolScopeSelect
+            value={filterSchoolId}
+            onChange={(nextId) => {
+              setFilterSchoolId(nextId);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
 
       {/* Parents list card */}

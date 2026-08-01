@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, ChevronDown, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -9,6 +11,7 @@ import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
+import { useSchoolQuery } from "../features/schools/useSchool";
 import { fetchClasses, createClass, deleteClass, updateClass } from "../api/services/grades";
 import { fetchSchools } from "../api/services/schools";
 import { fetchTeachers } from "../api/services/teachers";
@@ -519,12 +522,14 @@ function SchoolFilter({ value, onChange }) {
 
 // Main Page
 export default function ClassesPage() {
+  const [searchParams] = useSearchParams();
   const [classes, setClasses] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
-  const [filterSchoolId, setFilterSchoolId] = useState("");
+  const [filterSchoolId, setFilterSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  const scopedSchoolQuery = useSchoolQuery(filterSchoolId);
   const [boardsMap, setBoardsMap] = useState({});
   const [studentCounts, setStudentCounts] = useState({});
 
@@ -646,6 +651,17 @@ export default function ClassesPage() {
 
   return (
     <div className="ty-page-shell flex flex-col">
+      <Breadcrumb
+        items={
+          filterSchoolId
+            ? [
+                { label: "Institution Management", path: "/schools" },
+                { label: scopedSchoolQuery.data?.schoolName ?? "Institution", path: `/schools/${filterSchoolId}` },
+                { label: "Classes" },
+              ]
+            : [{ label: "Classes" }]
+        }
+      />
 
       {showAddModal && (
         <AddClassModal

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ImageIcon, ImageOff, Loader2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, Eye, ImageIcon, ImageOff, Loader2, X } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -459,6 +461,7 @@ function SchoolModal({
 }
 
 export default function SchoolsPage() {
+  const navigate = useNavigate();
   const [schools, setSchools] = useState([]);
   const [boardOptions, setBoardOptions] = useState([]);
   const [pagination, setPagination] = useState({
@@ -610,9 +613,10 @@ export default function SchoolsPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb items={[{ label: "Institution Management" }]} />
       <PageHeader
-        title="Schools"
-        subtitle={`${totalSchools} Schools`}
+        title="Institution Management"
+        subtitle={`${totalSchools} Institutions`}
         actionLabel="Add School"
         onAction={openAddModal}
       />
@@ -654,7 +658,13 @@ export default function SchoolsPage() {
               key: "name",
               header: "School Name",
               render: (school) => (
-                <span className="font-medium">{school.name}</span>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/schools/${school.id}`)}
+                  className="font-medium text-[#155966] transition hover:underline"
+                >
+                  {school.name}
+                </button>
               ),
             },
             {
@@ -681,6 +691,13 @@ export default function SchoolsPage() {
                   label={school.name}
                   onEdit={() => openEditModal(school)}
                   onDelete={() => setDeleteTarget(school)}
+                  extraItems={[
+                    {
+                      label: "View",
+                      icon: <Eye size={14} className="text-[#155966]" />,
+                      onClick: () => navigate(`/schools/${school.id}`),
+                    },
+                  ]}
                 />
               ),
             },

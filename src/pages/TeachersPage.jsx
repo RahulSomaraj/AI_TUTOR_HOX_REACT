@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ChevronDown, Loader2, Search, X, Eye, EyeOff,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
+import { useSchoolQuery } from "../features/schools/useSchool";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -465,6 +468,7 @@ function TeacherModal({ initialData = null, onClose, onSubmit }) {
 
 // ── TeachersPage
 export default function TeachersPage() {
+  const [searchParams] = useSearchParams();
   const [teachers, setTeachers] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -477,7 +481,8 @@ export default function TeachersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
-  const [schoolId, setSchoolId] = useState("");
+  const [schoolId, setSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  const scopedSchoolQuery = useSchoolQuery(schoolId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalMode, setModalMode] = useState(null);
@@ -637,6 +642,17 @@ export default function TeachersPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb
+        items={
+          schoolId
+            ? [
+                { label: "Institution Management", path: "/schools" },
+                { label: scopedSchoolQuery.data?.schoolName ?? "Institution", path: `/schools/${schoolId}` },
+                { label: "Teachers" },
+              ]
+            : [{ label: "Teachers" }]
+        }
+      />
       <PageHeader
         title="Teachers"
         actionLabel="Add Teacher"

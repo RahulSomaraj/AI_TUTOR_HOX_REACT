@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import Breadcrumb from "../components/ui/Breadcrumb";
+import { useSchoolQuery } from "../features/schools/useSchool";
 import AttendanceHeader   from "../components/Attendance/AttendanceHeader";
 import AttendanceFilters  from "../components/Attendance/AttendanceFilters";
 import AttendanceTable    from "../components/Attendance/AttendanceTable";
@@ -75,7 +78,9 @@ const Attendance = () => {
 
   //  Filter state 
   const [searchQuery,    setSearchQuery]    = useState("");
-  const [selectedSchool, setSelectedSchool] = useState("");
+  const [searchParams] = useSearchParams();
+  const [selectedSchool, setSelectedSchool] = useState(() => searchParams.get("schoolId") || "");
+  const scopedSchoolQuery = useSchoolQuery(selectedSchool);
   const [selectedGrade,  setSelectedGrade]  = useState("");
   const [selectedType,   setSelectedType]   = useState("");
 
@@ -300,6 +305,17 @@ const Attendance = () => {
 
   return (
     <div className="ty-page-shell flex flex-col">
+      <Breadcrumb
+        items={
+          selectedSchool
+            ? [
+                { label: "Institution Management", path: "/schools" },
+                { label: scopedSchoolQuery.data?.schoolName ?? "Institution", path: `/schools/${selectedSchool}` },
+                { label: "Attendance" },
+              ]
+            : [{ label: "Attendance" }]
+        }
+      />
 
       {/* ── Page Header  ── */}
       <div className="mb-8">

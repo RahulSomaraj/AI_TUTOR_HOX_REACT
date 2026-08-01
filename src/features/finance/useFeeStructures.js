@@ -4,8 +4,8 @@ import {
     fetchFeeStructures,
     createFeeStructure,
     updateFeeStructure,
-    fetchAcademicYears
 } from "../../api/services/finance";
+import { fetchAcademicYears } from "../../api/services/academicYears";
 import { extractList } from "../../api/normalize";
 
 const FEE_STRUCTURES_ROOT = "feeStructures";
@@ -48,6 +48,19 @@ export function useFeeStructuresQuery(params) {
       return selectFeeStructures(extractList(response, ["feeStructures"]), params);
     },
     placeholderData: (previous) => previous,
+  });
+}
+
+// Full fee-structure list (with nested feeType + academicYear) for pickers —
+// e.g. the Student Fee Assignment page filters this to one school client-side.
+export function useFeeStructureOptionsQuery() {
+  return useQuery({
+    queryKey: [FEE_STRUCTURES_ROOT, "options"],
+    queryFn: async () => {
+      const response = await fetchFeeStructures();
+      return extractList(response, ["feeStructures"]).filter((item) => item?.isActive !== false);
+    },
+    staleTime: 60_000,
   });
 }
 

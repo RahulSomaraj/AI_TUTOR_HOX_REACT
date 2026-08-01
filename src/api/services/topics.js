@@ -6,6 +6,11 @@ export async function fetchTopics(params = {}) {
   return data;
 }
 
+export async function fetchTopicById(id) {
+  const { data } = await api.get(`/topics/${id}`);
+  return data;
+}
+
 export async function createTopic(payload) {
   const { data } = await api.post("/topics", payload);
   return data;

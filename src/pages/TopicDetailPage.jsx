@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Pencil } from "lucide-react";
-import { updateTopicConcept } from "../api/services/topics";
+import Breadcrumb from "../components/ui/Breadcrumb";
+import { fetchTopicById, updateTopicConcept } from "../api/services/topics";
 
 function ConceptEditModal({ topic, onClose, onSuccess }) {
   const [concept, setConcept] = useState(topic.concept ?? "");
@@ -93,11 +94,50 @@ function ConceptEditModal({ topic, onClose, onSuccess }) {
 }
 
 export default function TopicDetailPage() {
-  const { textbookId, chapterId } = useParams();
+  const { textbookId, chapterId, topicId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [topic, setTopic] = useState(location.state?.topic ?? null);
+  const [loading, setLoading] = useState(!location.state?.topic);
   const [editOpen, setEditOpen] = useState(false);
+
+  useEffect(() => {
+    if (topic || !topicId) return;
+
+    let cancelled = false;
+
+    async function loadTopic() {
+      try {
+        setLoading(true);
+        const response = await fetchTopicById(topicId);
+        const topicData = response?.data ?? response;
+        if (!cancelled) setTopic(topicData);
+      } catch (err) {
+        console.error("Failed to load topic details:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadTopic();
+    return () => {
+      cancelled = true;
+    };
+  }, [topic, topicId]);
+
+  const chapterName = location.state?.chapter?.title ?? topic?.chapter?.title ?? "Chapter";
+  const textbookName = location.state?.textbook?.title ?? topic?.textbook?.title ?? "Syllabus";
+
+  if (loading) {
+    return (
+      <div className="ty-page-shell">
+        <div className="flex items-center justify-center gap-2 py-20 text-sm text-[#5b626a]">
+          <Loader2 size={18} className="animate-spin" />
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   if (!topic) {
     return (
@@ -119,6 +159,15 @@ export default function TopicDetailPage() {
 
   return (
     <div className="ty-page-shell">
+      <Breadcrumb
+        items={[
+          { label: "Syllabus", path: "/syllabus" },
+          { label: textbookName, path: `/syllabus/${textbookId}/chapters` },
+          { label: chapterName, path: `/syllabus/${textbookId}/chapters/${chapterId}/topics` },
+          { label: topic.title },
+        ]}
+      />
+
       <div className="mb-2 flex items-center gap-3">
         <button
           type="button"

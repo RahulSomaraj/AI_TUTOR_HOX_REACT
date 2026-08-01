@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
+import Breadcrumb from "../components/ui/Breadcrumb";
 import SearchInput from "../components/ui/SearchInput";
 import { extractList } from "../api/normalize";
 import { fetchNotifications, sendNotification } from "../api/services/notifications";
@@ -564,6 +565,7 @@ export default function NotificationsPage() {
   return (
     <div className="ty-page-shell">
       <div className="mx-auto max-w-[1600px]">
+        <Breadcrumb items={[{ label: "Notifications" }]} />
         <PageHeader
           title="Notifications"
           subtitle="Manage your notifications"

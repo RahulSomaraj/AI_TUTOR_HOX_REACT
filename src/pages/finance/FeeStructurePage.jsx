@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import PaginationControls from "../../components/PaginationControls";
 import PageHeader from "../../components/ui/PageHeader";
+import Breadcrumb from "../../components/ui/Breadcrumb";
 import SearchInput from "../../components/ui/SearchInput";
 import DataTable from "../../components/ui/DataTable";
 import ActionMenu from "../../components/ui/ActionMenu";
@@ -410,6 +411,7 @@ export default function FeeStructurePage() {
 
     return (
         <div className="ty-page-shell">
+            <Breadcrumb items={[{ label: "Fee Management", path: "/finance" }, { label: "Fee Structures" }]} />
             <PageHeader
                 title="Fee Structures"
                 subtitle={`${totalStructures} Fee Structures`}
