@@ -1,8 +1,9 @@
 import axios from "axios";
 import {
   getAccessToken,
-  getRefreshToken, 
+  getRefreshToken,
   setAccessToken,
+  setRefreshToken,
   clearSession,
 } from "../lib/session";
 
@@ -103,6 +104,12 @@ axiosInstance.interceptors.response.use(
 
       const newToken = raw.replace(/^Bearer\s+/i, "");
       setAccessToken(newToken);
+
+      // Refresh tokens are single-use (rotation) as of the 2026-08-03 backend
+      // fix — the one we just sent is now revoked server-side. Persist its
+      // replacement, or the *next* refresh sends a dead token and 401s with
+      // REFRESH_TOKEN_REVOKED, hard-logging the user out.
+      if (data?.data?.refreshToken) setRefreshToken(data.data.refreshToken);
 
       // Unblock every request that was queued while we were refreshing
       resolvePending(newToken);

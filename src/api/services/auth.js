@@ -1,14 +1,10 @@
-import axios from "axios";
 import api from "../axiosInstance";
 import {
-  getRefreshToken,
   setAccessToken,
   setRefreshToken,
   setStoredUser,
 } from "../../lib/session";
 import logger from "../../lib/logger";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function isEmail(value) {
   return typeof value === "string" && value.includes("@");
@@ -63,20 +59,7 @@ export async function fetchMyProfile() {
   return data?.data ?? data;
 }
 
-export async function refreshAccessToken() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) throw new Error("No refresh token available. Please log in again.");
-
-  // Raw axios (not the intercepted instance) to avoid an infinite retry loop.
-  const { data } = await axios.post(
-    `${BASE_URL}/refresh-token`,
-    { refreshToken },
-    { headers: { "Content-Type": "application/json" } }
-  );
-
-  const raw = data?.data?.token;
-  if (!raw) throw new Error("Refresh response did not contain a new token.");
-
-  setAccessToken(raw);
-  return raw.replace(/^Bearer\s+/i, "");
-}
+// NOTE: refreshing is deliberately NOT exposed here. `src/api/axiosInstance.js`
+// owns the only refresh path, because refresh tokens are single-use (rotation)
+// and only one refresh may be in flight at a time — a second entry point would
+// race it and burn the token. Let the 401 interceptor handle it.

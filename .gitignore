@@ -10,6 +10,8 @@ lerna-debug.log*
 paste.jsx
 process.md
 BACKEND_ISSUES.md
+# Hand-maintained backend contract reference, not a build input
+API_CONTRACT.md
 
 node_modules
 dist
@@ -36,3 +38,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backend write-ups for frontend-reported issues (local working log)
+FRONTEND_ISSUE_REPORTS.md
+# Frontend-facing extracts of the above, prepared for handoff
+FRONTEND_HANDOFF*.md
