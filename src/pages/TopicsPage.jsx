@@ -864,8 +864,9 @@ export default function TopicsPage() {
     <div className="ty-page-shell">
       <Breadcrumb
         items={[
-          { label: "Syllabus", path: "/syllabus" },
-          { label: textbook?.title ?? "Textbook", path: `/syllabus/${textbookId}/chapters` },
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Syllabus", path: "/curriculum/syllabus" },
+          { label: textbook?.title ?? "Textbook", path: `/curriculum/syllabus/${textbookId}/chapters` },
           { label: chapter?.title ?? "Topics" },
         ]}
       />
@@ -874,7 +875,7 @@ export default function TopicsPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate(`/syllabus/${textbookId}/chapters`)}
+              onClick={() => navigate(`/curriculum/syllabus/${textbookId}/chapters`)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#20242a] transition hover:bg-white"
               aria-label="Back to chapters"
             >
@@ -956,7 +957,7 @@ export default function TopicsPage() {
                       icon: <Eye size={14} className="text-[#155966]" />,
                       onClick: () =>
                         navigate(
-                          `/syllabus/${textbookId}/chapters/${chapterId}/topics/${topic.id}`,
+                          `/curriculum/syllabus/${textbookId}/chapters/${chapterId}/topics/${topic.id}`,
                           { state: { topic, chapter, textbook: location.state?.textbook } }
                         ),
                     },

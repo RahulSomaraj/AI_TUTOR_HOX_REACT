@@ -519,7 +519,8 @@ export default function BoardGradesPage() {
     <div className="ty-page-shell">
       <Breadcrumb
         items={[
-          { label: "Education Boards", path: "/education-boards" },
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Education Boards", path: "/curriculum/education-boards" },
           { label: boardName ?? "Board Grades" },
         ]}
       />

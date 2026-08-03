@@ -698,7 +698,7 @@ export default function ChaptersPage() {
   const code = textbook?.code ? ` - ${textbook.code}` : "";
 
   function openTopicsPage(chapter) {
-    navigate(`/syllabus/${textbookId}/chapters/${chapter.id}/topics`, {
+    navigate(`/curriculum/syllabus/${textbookId}/chapters/${chapter.id}/topics`, {
       state: { chapter, textbook },
     });
   }
@@ -793,7 +793,8 @@ export default function ChaptersPage() {
     <div className="ty-page-shell">
       <Breadcrumb
         items={[
-          { label: "Syllabus", path: "/syllabus" },
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Syllabus", path: "/curriculum/syllabus" },
           { label: textbook?.title ?? "Chapters" },
         ]}
       />
@@ -802,7 +803,7 @@ export default function ChaptersPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate("/syllabus")}
+              onClick={() => navigate("/curriculum/syllabus")}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#20242a] transition hover:bg-white"
               aria-label="Back to syllabus"
             >

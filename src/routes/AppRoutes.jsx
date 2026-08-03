@@ -19,6 +19,7 @@ import NotificationsPage from "../pages/NotificationsPage";
 import BannerPage from "../pages/BannerPage";
 
 import BoardGradesPage from "../pages/BoardGradesPage";
+import CurriculumPage from "../pages/CurriculumPage";
 import AttendancePage from "../pages/AttendancePage";
 import FeeManagementPage from "../pages/finance/FeeManagementPage";
 import FeeTypesPage from "../pages/finance/FeeTypesPage";
@@ -37,23 +38,42 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AdminLayout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="education-boards" element={<EducationBoardsPage />} />
-          <Route path="education-boards/:boardId/grades" element={<BoardGradesPage />} />
           <Route path="classes" element={<ClassesPage />} />
           <Route path="academic-years" element={<AcademicYearsPage />} />
           <Route path="schools" element={<SchoolsPage />} />
           <Route path="schools/:schoolId" element={<SchoolDetailPage />} />
-          <Route path="syllabus" element={<TextbooksPage />} />
-          <Route path="syllabus/:textbookId/chapters" element={<ChaptersPage />} />
+
+          {/* Curriculum Management */}
+          <Route path="curriculum" element={<CurriculumPage />} />
+          <Route path="curriculum/education-boards" element={<EducationBoardsPage />} />
           <Route
-            path="syllabus/:textbookId/chapters/:chapterId/topics"
+            path="curriculum/education-boards/:boardId/grades"
+            element={<BoardGradesPage />}
+          />
+          <Route path="curriculum/subjects" element={<SubjectsPage />} />
+          <Route path="curriculum/syllabus" element={<TextbooksPage />} />
+          <Route
+            path="curriculum/syllabus/:textbookId/chapters"
+            element={<ChaptersPage />}
+          />
+          <Route
+            path="curriculum/syllabus/:textbookId/chapters/:chapterId/topics"
             element={<TopicsPage />}
           />
           <Route
-            path="syllabus/:textbookId/chapters/:chapterId/topics/:topicId"
+            path="curriculum/syllabus/:textbookId/chapters/:chapterId/topics/:topicId"
             element={<TopicDetailPage />}
           />
-          <Route path="subjects" element={<SubjectsPage />} />
+
+          {/* Legacy paths — these moved under /curriculum; redirect bookmarks
+              instead of letting them fall through to the catch-all. */}
+          <Route
+            path="education-boards"
+            element={<Navigate to="/curriculum/education-boards" replace />}
+          />
+          <Route path="subjects" element={<Navigate to="/curriculum/subjects" replace />} />
+          <Route path="syllabus" element={<Navigate to="/curriculum/syllabus" replace />} />
+
           <Route path="teachers" element={<TeachersPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />

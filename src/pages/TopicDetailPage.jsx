@@ -161,9 +161,10 @@ export default function TopicDetailPage() {
     <div className="ty-page-shell">
       <Breadcrumb
         items={[
-          { label: "Syllabus", path: "/syllabus" },
-          { label: textbookName, path: `/syllabus/${textbookId}/chapters` },
-          { label: chapterName, path: `/syllabus/${textbookId}/chapters/${chapterId}/topics` },
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Syllabus", path: "/curriculum/syllabus" },
+          { label: textbookName, path: `/curriculum/syllabus/${textbookId}/chapters` },
+          { label: chapterName, path: `/curriculum/syllabus/${textbookId}/chapters/${chapterId}/topics` },
           { label: topic.title },
         ]}
       />
@@ -172,7 +173,7 @@ export default function TopicDetailPage() {
         <button
           type="button"
           onClick={() =>
-            navigate(`/syllabus/${textbookId}/chapters/${chapterId}/topics`, {
+            navigate(`/curriculum/syllabus/${textbookId}/chapters/${chapterId}/topics`, {
               state: location.state,
             })
           }

@@ -404,7 +404,7 @@ export default function EducationBoardsPage() {
               label: "View",
               icon: <Eye size={14} className="text-[#155966]" />,
               onClick: () => {
-                navigate(`/education-boards/${board.id}/grades`, {
+                navigate(`/curriculum/education-boards/${board.id}/grades`, {
                   state: { board },
                 });
               },
@@ -424,7 +424,12 @@ export default function EducationBoardsPage() {
 
   return (
     <div className="ty-page-shell">
-      <Breadcrumb items={[{ label: "Education Boards" }]} />
+      <Breadcrumb
+        items={[
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Education Boards" },
+        ]}
+      />
       <PageHeader
         title="Education Boards"
         subtitle={`${totalBoards} Education Boards`}

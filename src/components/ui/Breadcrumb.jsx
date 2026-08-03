@@ -13,7 +13,10 @@ export default function Breadcrumb({ items = [] }) {
   const crumbs = [{ label: "Dashboard", path: "/" }, ...items];
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-sm">
+    <nav
+      aria-label="Breadcrumb"
+      className="mb-4 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm"
+    >
       {crumbs.map((crumb, index) => {
         const isLast = index === crumbs.length - 1;
         const clickable = crumb.path && !isLast;

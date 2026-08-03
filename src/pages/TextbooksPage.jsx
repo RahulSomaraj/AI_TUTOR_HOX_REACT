@@ -441,7 +441,7 @@ export default function TextbooksPage() {
   }
 
   function openChaptersPage(textbook) {
-    navigate(`/syllabus/${textbook.id}/chapters`, {
+    navigate(`/curriculum/syllabus/${textbook.id}/chapters`, {
       state: { textbook },
     });
   }
@@ -511,7 +511,12 @@ export default function TextbooksPage() {
 
   return (
     <div className="ty-page-shell">
-      <Breadcrumb items={[{ label: "Syllabus" }]} />
+      <Breadcrumb
+        items={[
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Syllabus" },
+        ]}
+      />
       <PageHeader
         title="Syllabus"
         subtitle={`${totalTextbooks} Syllabus`}

@@ -740,7 +740,12 @@ export default function SubjectsPage() {
 
   return (
     <div className="ty-page-shell">
-      <Breadcrumb items={[{ label: "Subjects" }]} />
+      <Breadcrumb
+        items={[
+          { label: "Curriculum Management", path: "/curriculum" },
+          { label: "Subjects" },
+        ]}
+      />
       <PageHeader
         title="Subjects"
         subtitle={`${totalSubjects} Subjects`}
