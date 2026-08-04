@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, ChevronDown, Check } from "lucide-react";
+import { LockedSchoolField } from "../Schools/SchoolScopeField";
 
 const SearchableSelect = ({ value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {
   const [open,   setOpen]   = useState(false);
@@ -113,6 +114,7 @@ const AttendanceFilters = ({
   selectedSchool,
   onSchoolChange,
   schools,
+  lockedSchool = false,
   selectedType,
   onTypeChange,
   attendanceTypes,
@@ -138,17 +140,21 @@ const AttendanceFilters = ({
         />
       </div>
 
-      {/* Select school */}
+      {/* Select school — locked when we arrived from the Institution hub. */}
       <div className="flex-1">
-        <SearchableSelect
-          value={selectedSchool}
-          onChange={(val) => { onSchoolChange(val); onBoardChange(""); }}
-          options={schools}
-          placeholder="Select school"
-          loading={loadingSchools}
-          onOpen={onSchoolOpen}
-          onSearch={onSchoolSearch}
-        />
+        {lockedSchool ? (
+          <LockedSchoolField schoolId={selectedSchool} className="w-full" />
+        ) : (
+          <SearchableSelect
+            value={selectedSchool}
+            onChange={(val) => { onSchoolChange(val); onBoardChange(""); }}
+            options={schools}
+            placeholder="Select school"
+            loading={loadingSchools}
+            onOpen={onSchoolOpen}
+            onSearch={onSchoolSearch}
+          />
+        )}
       </div>
 
       {/* Select grade */}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, ChevronDown, PlusCircle, MinusCircle, X, Loader2 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
@@ -12,6 +12,7 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
 import { useSchoolQuery } from "../features/schools/useSchool";
+import { LockedSchoolField } from "../components/Schools/SchoolScopeField";
 import { fetchClasses, createClass, deleteClass, updateClass } from "../api/services/grades";
 import { fetchSchools } from "../api/services/schools";
 import { fetchTeachers } from "../api/services/teachers";
@@ -169,7 +170,7 @@ function useFilterSchoolSearch() {
 }
 
 // Add Class Modal
-function AddClassModal({ onClose, onSuccess }) {
+function AddClassModal({ lockedSchoolId = "", onClose, onSuccess }) {
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -177,9 +178,25 @@ function AddClassModal({ onClose, onSuccess }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // A locked school still has to behave like a picked one: the board-grade and
+  // teacher lookups key off `boardId`/`value`, and the Board field displays
+  // `board`. Derived during render rather than pushed into state by an effect.
+  const lockedSchoolQuery = useSchoolQuery(lockedSchoolId);
+  const school = useMemo(() => {
+    if (!lockedSchoolId) return selectedSchool;
+    const record = lockedSchoolQuery.data;
+    if (!record) return null;
+    return {
+      value: record.id,
+      label: record.schoolName || record.name,
+      boardId: record.boardId || record.board?.id || null,
+      board: record.board?.name || record.boardName || "",
+    };
+  }, [lockedSchoolId, lockedSchoolQuery.data, selectedSchool]);
+
   const { schools, loadingSchools, searchSchools } = useSchoolSearch();
-  const { boardGrades, loadingGrades, searchGrades } = useBoardGradeSearch(selectedSchool?.boardId);
-  const { teachers, loadingTeachers, searchTeachers } = useTeacherSearch(selectedSchool?.value);
+  const { boardGrades, loadingGrades, searchGrades } = useBoardGradeSearch(school?.boardId);
+  const { teachers, loadingTeachers, searchTeachers } = useTeacherSearch(school?.value);
 
   const handleSchoolChange = (opt) => {
     setSelectedSchool(opt);
@@ -193,7 +210,11 @@ function AddClassModal({ onClose, onSuccess }) {
 
   const handleSubmit = async () => {
     setError("");
-    if (!selectedSchool) return setError("Please select a school.");
+    if (!school) {
+      return setError(
+        lockedSchoolId ? "Still loading this institution — try again in a moment." : "Please select a school."
+      );
+    }
     if (!selectedGrade) return setError("Please select a board grade.");
     const validRows = classRows.filter((r) => r.name.trim());
     if (!validRows.length) return setError("Please enter at least one class name.");
@@ -201,8 +222,8 @@ function AddClassModal({ onClose, onSuccess }) {
     setSubmitting(true);
     try {
       await createClass({
-        schoolId: selectedSchool.value,
-        boardId: selectedSchool.boardId,
+        schoolId: school.value,
+        boardId: school.boardId,
         boardGradeId: selectedGrade.value,
         teacherId: selectedTeacher?.value || null,
         grades: validRows.map((row) => ({
@@ -238,22 +259,26 @@ function AddClassModal({ onClose, onSuccess }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">School</label>
-            <SearchableSelect value={selectedSchool} onChange={handleSchoolChange} onSearch={searchSchools} options={schools} placeholder="Select School" searchPlaceholder="Search school..." loading={loadingSchools} />
+            {lockedSchoolId ? (
+              <LockedSchoolField schoolId={lockedSchoolId} className="w-full" />
+            ) : (
+              <SearchableSelect value={selectedSchool} onChange={handleSchoolChange} onSearch={searchSchools} options={schools} placeholder="Select School" searchPlaceholder="Search school..." loading={loadingSchools} />
+            )}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Board</label>
-            <input type="text" readOnly value={selectedSchool?.board || ""} placeholder="Select a school first" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 bg-gray-50 cursor-not-allowed outline-none" />
+            <input type="text" readOnly value={school?.board || ""} placeholder="Select a school first" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 bg-gray-50 cursor-not-allowed outline-none" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Board Grade</label>
-            <SearchableSelect value={selectedGrade} onChange={setSelectedGrade} onSearch={searchGrades} options={boardGrades} placeholder={selectedSchool ? "Select Board Grade" : "Select a school first"} searchPlaceholder="Search grade..." disabled={!selectedSchool} loading={loadingGrades} />
+            <SearchableSelect value={selectedGrade} onChange={setSelectedGrade} onSearch={searchGrades} options={boardGrades} placeholder={school ? "Select Board Grade" : "Select a school first"} searchPlaceholder="Search grade..." disabled={!school} loading={loadingGrades} />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Teacher</label>
-            <SearchableSelect value={selectedTeacher} onChange={setSelectedTeacher} onSearch={searchTeachers} options={teachers} placeholder={selectedSchool ? "Select Teacher" : "Select a school first"} searchPlaceholder="Search teacher..." disabled={!selectedSchool} loading={loadingTeachers} />
+            <SearchableSelect value={selectedTeacher} onChange={setSelectedTeacher} onSearch={searchTeachers} options={teachers} placeholder={school ? "Select Teacher" : "Select a school first"} searchPlaceholder="Search teacher..." disabled={!school} loading={loadingTeachers} />
           </div>
 
           <div>
@@ -298,7 +323,7 @@ function AddClassModal({ onClose, onSuccess }) {
 }
 
 // Edit Class Modal
-function EditClassModal({ classData, boardsMap = {}, onClose, onSuccess }) {
+function EditClassModal({ classData, boardsMap = {}, lockedSchoolId = "", onClose, onSuccess }) {
   const [className, setClassName] = useState(classData?.aliasName || classData?.name || "");
   const [division, setDivision] = useState(
     classData?.division ||
@@ -400,7 +425,13 @@ function EditClassModal({ classData, boardsMap = {}, onClose, onSuccess }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">School</label>
-            <SearchableSelect value={selectedSchool} onChange={handleSchoolChange} onSearch={searchSchools} options={schools} placeholder="Select School" searchPlaceholder="Search school..." loading={loadingSchools} />
+            {/* Already seeded from classData.school, so the lock only needs to
+                remove the ability to move the class to another institution. */}
+            {lockedSchoolId ? (
+              <LockedSchoolField schoolId={lockedSchoolId} className="w-full" />
+            ) : (
+              <SearchableSelect value={selectedSchool} onChange={handleSchoolChange} onSearch={searchSchools} options={schools} placeholder="Select School" searchPlaceholder="Search school..." loading={loadingSchools} />
+            )}
           </div>
 
           <div>
@@ -529,6 +560,8 @@ export default function ClassesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [filterSchoolId, setFilterSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  // Fixed for the lifetime of this visit when we arrived from a school's hub.
+  const [lockedSchool] = useState(() => Boolean(searchParams.get("schoolId")));
   const scopedSchoolQuery = useSchoolQuery(filterSchoolId);
   const [boardsMap, setBoardsMap] = useState({});
   const [studentCounts, setStudentCounts] = useState({});
@@ -665,6 +698,7 @@ export default function ClassesPage() {
 
       {showAddModal && (
         <AddClassModal
+          lockedSchoolId={lockedSchool ? filterSchoolId : ""}
           onClose={() => setShowAddModal(false)}
           onSuccess={() => { setPage(1); loadClasses(); }}
         />
@@ -674,6 +708,7 @@ export default function ClassesPage() {
         <EditClassModal
           classData={editClass}
           boardsMap={boardsMap}
+          lockedSchoolId={lockedSchool ? filterSchoolId : ""}
           onClose={() => setEditClass(null)}
           onSuccess={() => { loadClasses(); }}
         />
@@ -705,7 +740,12 @@ export default function ClassesPage() {
           placeholder="Search by teacher or class name..."
           className="w-96"
         />
-        <SchoolFilter value={filterSchoolId} onChange={handleSchoolFilter} />
+        {/* Scoped from the Institution hub → locked; standalone → filterable. */}
+        {lockedSchool ? (
+          <LockedSchoolField schoolId={filterSchoolId} className="w-[220px]" />
+        ) : (
+          <SchoolFilter value={filterSchoolId} onChange={handleSchoolFilter} />
+        )}
       </div>
 
       <div className="mb-6 bg-white rounded-2xl overflow-hidden border border-gray-200">

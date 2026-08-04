@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Check, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import PageHeader from "../components/ui/PageHeader";
 import Breadcrumb from "../components/ui/Breadcrumb";
@@ -9,7 +9,7 @@ import SearchInput from "../components/ui/SearchInput";
 import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
-import SchoolScopeSelect from "../components/Finance/SchoolScopeSelect";
+import SchoolScopeField from "../components/Schools/SchoolScopeField";
 import useDebounce from "../hooks/useDebounce";
 import { extractList, safeId } from "../api/normalize";
 import { fetchFeeStructures } from "../api/services/finance";
@@ -208,6 +208,8 @@ function AcademicYearModal({ schoolId, initialData = null, onClose, onSuccess })
 export default function AcademicYearsPage() {
     const [searchParams] = useSearchParams();
     const [schoolId, setSchoolId] = useState(() => searchParams.get("schoolId") || "");
+    // Fixed for the lifetime of this visit when we arrived from a school's hub.
+    const [lockedSchool] = useState(() => Boolean(searchParams.get("schoolId")));
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [modalMode, setModalMode] = useState(null);
@@ -307,17 +309,49 @@ export default function AcademicYearsPage() {
         { key: "endDate", header: "End Date", render: (row) => formatDate(row.endDate) },
         {
             key: "status",
-            header: "Status",
-            render: (row) =>
-                row.isActive ? (
-                    <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                        Active
-                    </span>
-                ) : (
-                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                        Inactive
-                    </span>
-                ),
+            header: "Active",
+            // Unlike every other isActive in this API, an academic year's is
+            // mutually exclusive: activating one deactivates all its siblings
+            // in the same transaction. So these toggles behave like radios —
+            // switching one on visibly flips the others off, and the active one
+            // can't be switched off, because that would leave the school with
+            // no active year and no control to get one back.
+            render: (row) => {
+                const busy = activatingId === row.id;
+                return (
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={row.isActive}
+                            disabled={row.isActive || activateMutation.isPending}
+                            onClick={() => handleActivate(row)}
+                            title={
+                                row.isActive
+                                    ? "This is the active year. Activate another to change it."
+                                    : `Make ${row.name} the active year for this school`
+                            }
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
+                                row.isActive
+                                    ? "cursor-default bg-emerald-500"
+                                    : "cursor-pointer bg-slate-300 hover:bg-slate-400"
+                            }`}
+                            aria-label={
+                                row.isActive
+                                    ? `${row.name} is the active academic year`
+                                    : `Set ${row.name} as the active academic year`
+                            }
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                                    row.isActive ? "translate-x-6" : "translate-x-1"
+                                }`}
+                            />
+                        </button>
+                        {busy && <Loader2 size={14} className="animate-spin text-[#155966]" />}
+                    </div>
+                );
+            },
         },
         {
             key: "actions",
@@ -328,17 +362,6 @@ export default function AcademicYearsPage() {
                     label={row.name}
                     onEdit={() => openEditModal(row)}
                     onDelete={() => setDeleteTarget(row)}
-                    extraItems={
-                        row.isActive
-                            ? []
-                            : [
-                                  {
-                                      label: activatingId === row.id ? "Activating..." : "Set Active",
-                                      icon: <Check size={14} className="text-[#155966]" />,
-                                      onClick: () => handleActivate(row),
-                                  },
-                              ]
-                    }
                 />
             ),
         },
@@ -366,9 +389,11 @@ export default function AcademicYearsPage() {
 
             <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <div className="w-full sm:w-[260px]">
-                    <SchoolScopeSelect
+                    {/* Scoped from the Institution hub → locked; standalone → selectable. */}
+                    <SchoolScopeField
                         includeAll={false}
-                        value={schoolId}
+                        locked={lockedSchool}
+                        schoolId={schoolId}
                         onChange={(nextId) => {
                             setSchoolId(nextId);
                             setPage(1);

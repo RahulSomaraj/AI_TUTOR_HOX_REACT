@@ -8,6 +8,7 @@ import CountryCodePicker from "../components/Countrycodepicker";
 import PageHeader from "../components/ui/PageHeader";
 import Breadcrumb from "../components/ui/Breadcrumb";
 import { useSchoolQuery } from "../features/schools/useSchool";
+import { LockedSchoolField } from "../components/Schools/SchoolScopeField";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -221,7 +222,7 @@ function mapTeacherRow(teacher) {
 }
 
 //  TeacherModal
-function TeacherModal({ initialData = null, onClose, onSubmit }) {
+function TeacherModal({ initialData = null, lockedSchoolId = "", onClose, onSubmit }) {
   const isEdit = Boolean(initialData);
 
   const [form, setForm] = useState({
@@ -229,7 +230,8 @@ function TeacherModal({ initialData = null, onClose, onSubmit }) {
     contactNumber: initialData?.contactNumber ?? "",
     countryCode: initialData?.countryCode ?? "+91",
     email: initialData?.email ?? "",
-    schoolId: initialData?.schoolId ?? "",
+    // Seeded from the scoped school so a locked field still submits a schoolId.
+    schoolId: initialData?.schoolId || lockedSchoolId || "",
     password: "",
     confirmPassword: "",
   });
@@ -289,7 +291,9 @@ function TeacherModal({ initialData = null, onClose, onSubmit }) {
         email: form.email.trim(),
         contactNumber: form.contactNumber.trim(),
         countryCode: form.countryCode.trim() || "+91",
-        schoolId: form.schoolId,
+        // The lock wins: the field can't be edited, so never let a stale form
+        // value diverge from the institution the page is scoped to.
+        schoolId: lockedSchoolId || form.schoolId,
         ...(!isEdit && { password: form.password }),
       });
       onClose();
@@ -365,19 +369,23 @@ function TeacherModal({ initialData = null, onClose, onSubmit }) {
             </div>
           </div>
 
-          {/* School — API-based searchable dropdown */}
+          {/* School — locked to the scoped institution, else searchable. */}
           <div>
             <label className="mb-2 block text-[14px] font-medium text-[#20242a]">School</label>
-            <SearchableSelect
-              value={selectedSchool}
-              onChange={handleSchoolChange}
-              onSearch={searchSchools}
-              options={schools}
-              placeholder="Select School"
-              searchPlaceholder="Search school..."
-              disabled={saving}
-              loading={loadingSchools}
-            />
+            {lockedSchoolId ? (
+              <LockedSchoolField schoolId={lockedSchoolId} className="w-full" />
+            ) : (
+              <SearchableSelect
+                value={selectedSchool}
+                onChange={handleSchoolChange}
+                onSearch={searchSchools}
+                options={schools}
+                placeholder="Select School"
+                searchPlaceholder="Search school..."
+                disabled={saving}
+                loading={loadingSchools}
+              />
+            )}
           </div>
 
           {/* Email */}
@@ -482,6 +490,10 @@ export default function TeachersPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [schoolId, setSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  // Read once from the initial URL, not on every render: the school is fixed
+  // for the lifetime of this visit, and re-deriving it would unlock the field
+  // if the query string were ever rewritten.
+  const [lockedSchool] = useState(() => Boolean(searchParams.get("schoolId")));
   const scopedSchoolQuery = useSchoolQuery(schoolId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -669,14 +681,18 @@ export default function TeachersPage() {
           placeholder="Search teachers by name..."
         />
 
-        {/* API-based school filter dropdown */}
-        <SchoolFilter
-          value={schoolId}
-          onChange={(id) => {
-            setSchoolId(id);
-            setPage(1);
-          }}
-        />
+        {/* Scoped from the Institution hub → locked; standalone → filterable. */}
+        {lockedSchool ? (
+          <LockedSchoolField schoolId={schoolId} className="w-full lg:w-[200px]" />
+        ) : (
+          <SchoolFilter
+            value={schoolId}
+            onChange={(id) => {
+              setSchoolId(id);
+              setPage(1);
+            }}
+          />
+        )}
       </div>
 
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
@@ -720,6 +736,7 @@ export default function TeachersPage() {
 
       {modalMode === "add" && (
         <TeacherModal
+          lockedSchoolId={lockedSchool ? schoolId : ""}
           onClose={closeModal}
           onSubmit={handleCreateTeacher}
         />
@@ -728,6 +745,7 @@ export default function TeachersPage() {
       {modalMode === "edit" && activeTeacher && (
         <TeacherModal
           initialData={activeTeacher}
+          lockedSchoolId={lockedSchool ? schoolId : ""}
           onClose={closeModal}
           onSubmit={handleUpdateTeacher}
         />

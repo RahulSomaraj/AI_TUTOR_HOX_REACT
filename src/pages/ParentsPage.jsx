@@ -12,6 +12,7 @@ import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import SchoolScopeSelect from "../components/Finance/SchoolScopeSelect";
+import SchoolScopeField, { LockedSchoolField } from "../components/Schools/SchoolScopeField";
 import useDebounce from "../hooks/useDebounce";
 import useOutsideClick from "../hooks/useOutsideClick";
 import { fetchSchools } from "../api/services/schools";
@@ -281,16 +282,20 @@ function StudentMultiSelect({
 }
 
 //  Parent Modal 
-function ParentModal({ initialData = null, onClose, onSuccess }) {
+function ParentModal({ initialData = null, lockedSchoolId = "", onClose, onSuccess }) {
   const isEdit = initialData !== null;
 
   const { schools, loadingSchools, searchSchools } = useSchoolSearch();
 
-  const [selectedSchool, setSelectedSchool] = useState(
-    initialData?.schoolId
-      ? { value: String(initialData.schoolId), label: initialData.schoolName || "" }
-      : null
-  );
+  // Seeded from the scoped school when locked — the student picker reads
+  // `.value` to scope its search, so this has to be a real option even though
+  // the control is read-only. LockedSchoolField resolves the name itself.
+  const [selectedSchool, setSelectedSchool] = useState(() => {
+    if (initialData?.schoolId) {
+      return { value: String(initialData.schoolId), label: initialData.schoolName || "" };
+    }
+    return lockedSchoolId ? { value: String(lockedSchoolId), label: "" } : null;
+  });
 
   const { students, loadingStudents, searchStudents } = useStudentSearch(selectedSchool?.value);
 
@@ -496,15 +501,19 @@ function ParentModal({ initialData = null, onClose, onSuccess }) {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               School
             </label>
-            <SearchableSelect
-              value={selectedSchool}
-              onChange={handleSchoolChange}
-              onSearch={searchSchools}
-              options={schools}
-              placeholder="Select School"
-              searchPlaceholder="Search school..."
-              loading={loadingSchools}
-            />
+            {lockedSchoolId ? (
+              <LockedSchoolField schoolId={lockedSchoolId} className="w-full" />
+            ) : (
+              <SearchableSelect
+                value={selectedSchool}
+                onChange={handleSchoolChange}
+                onSearch={searchSchools}
+                options={schools}
+                placeholder="Select School"
+                searchPlaceholder="Search school..."
+                loading={loadingSchools}
+              />
+            )}
           </div>
 
           <StudentMultiSelect
@@ -560,6 +569,8 @@ export default function ParentsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [filterSchoolId, setFilterSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  // Fixed for the lifetime of this visit when we arrived from a school's hub.
+  const [lockedSchool] = useState(() => Boolean(searchParams.get("schoolId")));
   const scopedSchoolQuery = useSchoolQuery(filterSchoolId);
 
   const [loading, setLoading] = useState(false);
@@ -619,6 +630,7 @@ export default function ParentsPage() {
       {showModal && (
         <ParentModal
           initialData={null}
+          lockedSchoolId={lockedSchool ? filterSchoolId : ""}
           onClose={() => setShowModal(false)}
           onSuccess={() => {
             setPage(1);
@@ -630,6 +642,7 @@ export default function ParentsPage() {
       {editData && (
         <ParentModal
           initialData={editData}
+          lockedSchoolId={lockedSchool ? filterSchoolId : ""}
           onClose={() => setEditData(null)}
           onSuccess={() => {
             loadParents();
@@ -695,8 +708,10 @@ export default function ParentsPage() {
         />
 
         <div className="w-full lg:w-[220px]">
-          <SchoolScopeSelect
-            value={filterSchoolId}
+          {/* Scoped from the Institution hub → locked; standalone → filterable. */}
+          <SchoolScopeField
+            schoolId={filterSchoolId}
+            locked={lockedSchool}
             onChange={(nextId) => {
               setFilterSchoolId(nextId);
               setPage(1);
