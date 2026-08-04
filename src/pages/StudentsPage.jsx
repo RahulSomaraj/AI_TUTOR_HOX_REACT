@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Search, ChevronDown,
-  Loader2, Eye, EyeOff, X,
+  Loader2, Eye, EyeOff, X, ShieldCheck,
 } from "lucide-react";
 import PaginationControls from "../components/PaginationControls";
 import CountryCodePicker from "../components/Countrycodepicker";
 import PageHeader from "../components/ui/PageHeader";
 import Breadcrumb from "../components/ui/Breadcrumb";
 import { useSchoolQuery } from "../features/schools/useSchool";
+import { LockedSchoolField } from "../components/Schools/SchoolScopeField";
 import SearchInput from "../components/ui/SearchInput";
 import SearchableSelect from "../components/ui/SearchableSelect";
 import DataTable from "../components/ui/DataTable";
@@ -20,8 +21,10 @@ import { fetchClasses } from "../api/services/grades";
 import { fetchSchools } from "../api/services/schools";
 import {
   fetchAllStudents, createStudent, updateStudent,
-  deleteStudent,
+  deleteStudent, setStudentVerified,
 } from "../api/services/students";
+import { getStudentEligibility } from "../lib/studentEligibility";
+import logger from "../lib/logger";
 
 const DROPDOWN_LIMIT = 50;
 
@@ -197,14 +200,19 @@ function SchoolFilter({ value, onChange }) {
 }
 
 //  Add / Edit Student Modal
-function StudentModal({ initialData = null, onClose, onSuccess }) {
+function StudentModal({ initialData = null, lockedSchoolId = "", onClose, onSuccess }) {
   const isEdit = initialData !== null;
 
-  const [selectedSchool, setSelectedSchool] = useState(
-    initialData?.schoolId
-      ? { value: String(initialData.schoolId), label: initialData.schoolName || "" }
-      : null
-  );
+  // Seeded from the scoped school when locked — the grade picker and the
+  // submit payload both read `.value`, so the school has to be a real option
+  // even though the control itself is read-only. The label is left blank
+  // because LockedSchoolField resolves and displays the name itself.
+  const [selectedSchool, setSelectedSchool] = useState(() => {
+    if (initialData?.schoolId) {
+      return { value: String(initialData.schoolId), label: initialData.schoolName || "" };
+    }
+    return lockedSchoolId ? { value: String(lockedSchoolId), label: "" } : null;
+  });
   const [selectedGrade, setSelectedGrade] = useState(
     initialData?.gradeId
       ? { value: String(initialData.gradeId), label: initialData.gradeName || "" }
@@ -216,6 +224,10 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
     contactNumber: initialData?.contactNumber ?? "",
     countryCode: initialData?.countryCode ?? "+91",
     contactEmail: initialData?.contactEmail ?? "",
+    // Required for attendance: the backend recomputes isAcademicInfoComplete as
+    // `gradeId && schoolId && rollNo`, so a student with no roll number can
+    // never be marked present.
+    rollNo: initialData?.rollNo ?? "",
     password: "",
     confirmPassword: "",
   });
@@ -260,14 +272,35 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
 
       if (selectedSchool?.value) payload.schoolId = Number(selectedSchool.value);
       if (selectedGrade?.value) payload.gradeId = Number(selectedGrade.value);
+      if (String(form.rollNo).trim() !== "") payload.rollNo = Number(form.rollNo);
+
+      // Sent on update too, not just create — otherwise an existing student who
+      // predates this can never be corrected from the admin panel.
+      payload.isTermsAccepted = true;
 
       if (isEdit) {
         if (form.password) payload.password = form.password;
         await updateStudent(initialData.id, payload);
       } else {
         payload.password = form.password;
-        payload.isTermsAccepted = true;
-        await createStudent(payload);
+        const created = await createStudent(payload);
+
+        // `isVerified` can't be set at create time, so an admin-created student
+        // is otherwise stuck unverified — and therefore permanently ineligible
+        // for attendance. This is the backend's sanctioned admin override.
+        // A failure here leaves a valid student who just needs verifying, so
+        // report it instead of failing the whole create.
+        const newId = created?.data?.id ?? created?.id;
+        if (newId) {
+          try {
+            await setStudentVerified(newId, true);
+          } catch (verifyErr) {
+            // Don't fail the create — the student exists and is valid, they're
+            // just unverified. The Eligibility column will say so and offer the
+            // Verify action, so the table itself surfaces the fix.
+            logger.error("Student created but auto-verification failed:", verifyErr);
+          }
+        }
       }
 
       onSuccess();
@@ -399,18 +432,22 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* School  */}
+          {/* School — locked to the scoped institution, else searchable. */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">School</label>
-            <SearchableSelect
-              value={selectedSchool}
-              onChange={handleSchoolChange}
-              onSearch={searchSchools}
-              options={schools}
-              placeholder="Select School"
-              searchPlaceholder="Search school..."
-              loading={loadingSchools}
-            />
+            {lockedSchoolId ? (
+              <LockedSchoolField schoolId={lockedSchoolId} className="w-full" />
+            ) : (
+              <SearchableSelect
+                value={selectedSchool}
+                onChange={handleSchoolChange}
+                onSearch={searchSchools}
+                options={schools}
+                placeholder="Select School"
+                searchPlaceholder="Search school..."
+                loading={loadingSchools}
+              />
+            )}
           </div>
 
           <div>
@@ -425,6 +462,21 @@ function StudentModal({ initialData = null, onClose, onSuccess }) {
               disabled={!selectedSchool}
               loading={loadingGrades}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Roll Number</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.rollNo}
+              onChange={(e) => setForm((f) => ({ ...f, rollNo: e.target.value.replace(/[^0-9]/g, "") }))}
+              placeholder="e.g. 12"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-[#155966] focus:ring-1 focus:ring-[#155966]/20 transition-colors"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Required before attendance can be marked for this student.
+            </p>
           </div>
         </div>
 
@@ -464,6 +516,10 @@ export default function StudentsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const [search, setSearch] = useState("");
   const [filterSchoolId, setFilterSchoolId] = useState(() => searchParams.get("schoolId") || "");
+  // Fixed for the lifetime of this visit when we arrived from a school's hub.
+  const [lockedSchool] = useState(() => Boolean(searchParams.get("schoolId")));
+  const [verifyingId, setVerifyingId] = useState(null);
+  const [actionError, setActionError] = useState("");
   const scopedSchoolQuery = useSchoolQuery(filterSchoolId);
   const debouncedSearch = useDebounce(search, 400);
 
@@ -526,6 +582,22 @@ export default function StudentsPage() {
     setPage(1);
   };
 
+  const handleVerify = async (student) => {
+    setVerifyingId(student.id);
+    setActionError("");
+    try {
+      await setStudentVerified(student.id, true);
+      loadStudents();
+    } catch (err) {
+      setActionError(
+        err?.response?.data?.message ||
+          `Failed to verify ${student?.name || "this student"}. Verifying requires an admin role.`
+      );
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   const columns = [
     { key: "name", header: "Name", render: (s) => (
       <span className="font-medium text-[#2a2d32]">{s.name || "-"}</span>
@@ -536,9 +608,41 @@ export default function StudentsPage() {
     ) },
     { key: "school", header: "School", render: (s) => s.school?.schoolName || "-" },
     { key: "grade", header: "Grade", render: (s) => s.grade?.aliasName || s.grade?.name || "-" },
+    { key: "rollNo", header: "Roll No", render: (s) => (s.rollNo ?? "—") },
+    {
+      key: "eligibility",
+      header: "Attendance",
+      // Surfaces the backend's eligibility rule up front. Without this an admin
+      // only discovers a student can't be marked present at the moment they try
+      // to mark them, by which point they've filled in a whole form.
+      render: (s) => {
+        const { eligible, missing } = getStudentEligibility(s);
+        return (
+          <span
+            title={eligible ? "Can be marked present" : `Blocked: ${missing.join(", ")}`}
+            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+              eligible ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {eligible ? "Eligible" : missing[0]}
+          </span>
+        );
+      },
+    },
     { key: "actions", header: <span className="sr-only">Actions</span>, align: "right", render: (s) => (
       <ActionMenu
         label={s.name || "student"}
+        extraItems={
+          s.isVerified
+            ? []
+            : [
+                {
+                  label: verifyingId === s.id ? "Verifying..." : "Verify",
+                  icon: <ShieldCheck size={14} className="text-[#155966]" />,
+                  onClick: () => handleVerify(s),
+                },
+              ]
+        }
         onEdit={() =>
           setEditData({
             id: s.id,
@@ -563,6 +667,7 @@ export default function StudentsPage() {
       {showModal && (
         <StudentModal
           initialData={null}
+          lockedSchoolId={lockedSchool ? filterSchoolId : ""}
           onClose={() => setShowModal(false)}
           onSuccess={() => {
             setPage(1);
@@ -574,6 +679,7 @@ export default function StudentsPage() {
       {editData && (
         <StudentModal
           initialData={editData}
+          lockedSchoolId={lockedSchool ? filterSchoolId : ""}
           onClose={() => setEditData(null)}
           onSuccess={() => {
             loadStudents();
@@ -636,11 +742,19 @@ export default function StudentsPage() {
           placeholder="Search students by name..."
         />
 
-        <SchoolFilter
-          value={filterSchoolId}
-          onChange={handleSchoolFilter}
-        />
+        {/* Scoped from the Institution hub → locked; standalone → filterable. */}
+        {lockedSchool ? (
+          <LockedSchoolField schoolId={filterSchoolId} className="w-full lg:w-[200px]" />
+        ) : (
+          <SchoolFilter value={filterSchoolId} onChange={handleSchoolFilter} />
+        )}
       </div>
+
+      {actionError && (
+        <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
 
       {/* Students list card */}
       <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">

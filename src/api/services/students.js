@@ -28,6 +28,18 @@ export async function updateStudent(id, payload) {
   return data;
 }
 
+/**
+ * Admin override for the OTP verification requirement.
+ *
+ * `isVerified` can't be set at create time, so an admin-created student needs
+ * this second call before they're eligible for attendance. Allowed for
+ * SUPER_ADMIN, SCHOOL_ADMIN, DIRECTOR and PRINCIPAL.
+ */
+export async function setStudentVerified(id, isVerified = true) {
+  const { data } = await api.patch(`/users/${id}/is-verified`, { isVerified });
+  return data;
+}
+
 export async function fetchStudentsForParent(params = {}) {
   const { schoolId } = params;
   const { data } = await api.get("/users", { params: { schoolId: Number(schoolId) } });

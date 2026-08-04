@@ -6,6 +6,8 @@ import { fetchSchools } from "../../api/services/schools";
 import { fetchAllStudents } from "../../api/services/students";
 import { fetchTeachers } from "../../api/services/teachers";
 import { createAttendance } from "../../api/services/attendance";
+import { LockedSchoolField } from "../Schools/SchoolScopeField";
+import { getStudentEligibility } from "../../lib/studentEligibility";
 
 //  Searchable dropdown 
 const SearchableSelect = ({ label, value, onChange, options, placeholder, disabled, loading, onOpen, onSearch }) => {
@@ -76,12 +78,17 @@ const SearchableSelect = ({ label, value, onChange, options, placeholder, disabl
                 options.map((o) => (
                   <li
                     key={o.value}
-                    onClick={() => handleSelect(o.value)}
-                    className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors
-                      ${o.value === value ? "bg-teal-50 text-teal-700 font-medium" : "text-gray-700 hover:bg-gray-50"}`}
+                    onClick={() => { if (!o.disabled) handleSelect(o.value); }}
+                    title={o.disabled ? "This student can't be marked yet — fix the flagged items on the Students page." : undefined}
+                    className={`flex items-center justify-between px-3 py-2 text-sm transition-colors
+                      ${o.disabled
+                        ? "cursor-not-allowed text-gray-400"
+                        : o.value === value
+                          ? "bg-teal-50 text-teal-700 font-medium cursor-pointer"
+                          : "text-gray-700 hover:bg-gray-50 cursor-pointer"}`}
                   >
                     {o.label}
-                    {o.value === value && <Check size={12} className="text-teal-600" />}
+                    {o.value === value && !o.disabled && <Check size={12} className="text-teal-600" />}
                   </li>
                 ))
               )}
@@ -118,10 +125,13 @@ const ATTENDANCE_TYPES = [
   { value: "student", label: "Student" },
   { value: "teacher", label: "Teacher" },
 ];
+// Values are the API's enum exactly — `POST /attendance` documents
+// `status: Present | Absent | Late`, capitalised. These were lowercase, which
+// the contract doesn't accept.
 const ATTENDANCE_STATUSES = [
-  { value: "present", label: "Present" },
-  { value: "absent",  label: "Absent"  },
-  { value: "late",    label: "Late"    },
+  { value: "Present", label: "Present" },
+  { value: "Absent",  label: "Absent"  },
+  { value: "Late",    label: "Late"    },
 ];
 
 const toApiDate = (s) => {
@@ -136,11 +146,11 @@ const formatDateDisplay = (s) => {
 };
 
 //  Main modal
-const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
+const AddAttendanceModal = ({ isOpen, onClose, onSubmit, lockedSchoolId = "" }) => {
   const isTeacher = (type) => type === "teacher";
 
   const [form, setForm] = useState({
-    attendanceType: "", school: "", grade: "", status: "", person: "", date: "",
+    attendanceType: "", school: lockedSchoolId, grade: "", status: "", person: "", date: "",
   });
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [error,          setError]          = useState("");
@@ -159,13 +169,15 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
   //  Reset on modal open 
   useEffect(() => {
     if (!isOpen) return;
-    setForm({ attendanceType: "", school: "", grade: "", status: "", person: "", date: "" });
+    // Re-seed the scoped school on every open, so reopening the modal doesn't
+    // land on a blank, locked field.
+    setForm({ attendanceType: "", school: lockedSchoolId, grade: "", status: "", person: "", date: "" });
     setSchools([]);
     setGrades([]);
     setPersons([]);
     setError("");
     setDatePickerOpen(false);
-  }, [isOpen]);
+  }, [isOpen, lockedSchoolId]);
 
   //  Reset grades + persons when school or type changes 
   useEffect(() => {
@@ -241,10 +253,17 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
         const res = await fetchAllStudents({ schoolId: form.school, gradeId: form.grade, page: 1, limit: 50, name: query });
         const raw = res?.data?.students || res?.data?.data || res?.data || [];
         setPersons(
-          (Array.isArray(raw) ? raw : []).map((s) => ({
-            value: String(s.id),
-            label: [s.firstName, s.lastName].filter(Boolean).join(" ") || s.username || s.name || "—",
-          }))
+          (Array.isArray(raw) ? raw : []).map((s) => {
+            const name = [s.firstName, s.lastName].filter(Boolean).join(" ") || s.username || s.name || "—";
+            // The backend rejects ineligible students at submit time. Say so in
+            // the list instead, so nobody fills in the whole form to find out.
+            const { eligible, missing } = getStudentEligibility(s);
+            return {
+              value: String(s.id),
+              label: eligible ? name : `${name} — ${missing.join(", ")}`,
+              disabled: !eligible,
+            };
+          })
         );
       }
     } catch (e) {
@@ -278,11 +297,17 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
     setSubmitting(true);
     try {
       const payload = {
-        schoolId: Number(form.school),
-        date:     toApiDate(form.date),
+        schoolId:       Number(form.school),
+        // Documented field that was never being sent.
+        attendanceType: teacher ? "Teacher" : "Student",
+        date:           toApiDate(form.date),
         records: [{
-          studentId: Number(form.person),
-          status:    form.status,
+          // The record DTO has separate studentId / teacherId fields. This
+          // previously sent the selected person's id as `studentId` even for
+          // teacher attendance, so the backend looked them up in the student
+          // table and reported them as a missing student.
+          ...(teacher ? { teacherId: Number(form.person) } : { studentId: Number(form.person) }),
+          status: form.status,
         }],
       };
       // Only add gradeId for students
@@ -316,16 +341,24 @@ const AddAttendanceModal = ({ isOpen, onClose, onSubmit }) => {
               options={ATTENDANCE_TYPES}
               placeholder="Select type"
             />
-            <SearchableSelect
-              label="School"
-              value={form.school}
-              onChange={set("school")}
-              options={schools}
-              placeholder="Select school"
-              loading={loadingSchools}
-              onOpen={loadSchools}
-              onSearch={loadSchools}
-            />
+            {/* Locked to the institution we navigated in from. */}
+            {lockedSchoolId ? (
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-gray-600">School</label>
+                <LockedSchoolField schoolId={lockedSchoolId} className="w-full !bg-[#f3eef7]" />
+              </div>
+            ) : (
+              <SearchableSelect
+                label="School"
+                value={form.school}
+                onChange={set("school")}
+                options={schools}
+                placeholder="Select school"
+                loading={loadingSchools}
+                onOpen={loadSchools}
+                onSearch={loadSchools}
+              />
+            )}
             {/* Grade — disabled & special placeholder for teachers */}
             <SearchableSelect
               label="Grade"

@@ -80,6 +80,8 @@ const Attendance = () => {
   const [searchQuery,    setSearchQuery]    = useState("");
   const [searchParams] = useSearchParams();
   const [selectedSchool, setSelectedSchool] = useState(() => searchParams.get("schoolId") || "");
+  // Fixed for the lifetime of this visit when we arrived from a school's hub.
+  const [lockedSchool] = useState(() => Boolean(searchParams.get("schoolId")));
   const scopedSchoolQuery = useSchoolQuery(selectedSchool);
   const [selectedGrade,  setSelectedGrade]  = useState("");
   const [selectedType,   setSelectedType]   = useState("");
@@ -287,14 +289,24 @@ const Attendance = () => {
   const schoolOptions = schools.map((s) => ({ id: s.id, name: s.name }));
   const gradeOptions  = grades.map((g)  => ({ id: g.id, name: g.aliasName ?? g.name }));
 
-  // Handle both student and teacher name/id fields from API
+  // GET /attendance returns an already-flattened row — verified against the
+  // running API, not inferred:
+  //   { id, status: "Absent", notes, type: "Student", studentId,
+  //     name: "Anaswara PK", rollNo: 1, contactEmail, contactNumber,
+  //     grade: "10-C" }
+  //
+  // `grade` is a plain string, not an object. The previous mapping reached for
+  // `r.grade?.aliasName`, which is always undefined on a string, and for
+  // `r.studentName`, which the API never returns — so name and class rendered
+  // as "—" for every row while roll number worked, because `r.rollNo` happened
+  // to be the one guess that matched.
   const tableStudents = attendance.map((r) => ({
     id:       r.id ?? r.studentId ?? r.teacherId,
-    name:     r.studentName   ?? r.teacherName   ?? r.student?.name ?? r.teacher?.name ?? "—",
-    rollNo:   r.rollNo        ?? r.student?.rollNo ?? r.teacher?.employeeId ?? "—",
-    class:    r.gradeName     ?? r.grade?.aliasName ?? r.grade?.name ?? r.teacher?.designation ?? "—",
+    name:     r.name ?? "—",
+    rollNo:   r.rollNo ?? "—",
+    class:    typeof r.grade === "string" ? r.grade : (r.grade?.aliasName ?? r.grade?.name ?? "—"),
     schoolId: r.schoolId,
-    avatar:   r.student?.avatar ?? r.teacher?.avatar ?? null,
+    avatar:   r.avatar ?? null,
     attendance: { [selectedDate]: r.status?.toLowerCase() },
   }));
 
@@ -338,6 +350,7 @@ const Attendance = () => {
           onBoardChange={setSelectedGrade}
           boards={gradeOptions}
           selectedSchool={selectedSchool}
+          lockedSchool={lockedSchool}
           onSchoolChange={(val) => { setSelectedSchool(val); setSelectedGrade(""); }}
           schools={schoolOptions}
           selectedType={selectedType}
@@ -408,6 +421,7 @@ const Attendance = () => {
 
       <AddAttendanceModal
         isOpen={addModalOpen}
+        lockedSchoolId={lockedSchool ? selectedSchool : ""}
         onClose={() => setAddModalOpen(false)}
         onSubmit={handleAddSubmit}
       />
