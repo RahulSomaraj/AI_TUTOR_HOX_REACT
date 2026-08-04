@@ -1,16 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPayment } from "../../api/services/payments";
-import {
-  fetchFeeSummary,
-  fetchLedger,
-  generateFeeCharges,
-} from "../../api/services/ledger";
+import { fetchFeeSummary, generateFeeCharges } from "../../api/services/ledger";
 import { fetchStudentFeesByStudent } from "../../api/services/finance";
 import { extractList, safeId } from "../../api/normalize";
+import { retryTransientOnly } from "../../lib/apiError";
 import { toPaise } from "../../lib/money";
+import { LEDGER_ROOT, STATEMENT_ROOT } from "./useLedger";
 
 const SUMMARY_ROOT = "feeSummary";
-const LEDGER_ROOT = "ledger";
 const PAYMENTS_ROOT = "payments";
 const STUDENT_FEES_ROOT = "studentFees";
 
@@ -160,42 +157,12 @@ export function buildPaymentPayload({
 
 // ─── Queries & mutations ───────────────────────────────────────────────────
 
-/**
- * React Query retries three times by default, which is wrong for everything in
- * this module: a 404 (endpoint absent, or unknown student) and a 403 (wrong
- * role) give the same answer on the fourth attempt as the first. Retrying only
- * makes the failure take four times as long to surface, and triples the noise
- * in the console. Retry genuine blips — network drops and 5xx — and nothing else.
- */
-function retryTransientOnly(failureCount, error) {
-  const status = error?.response?.status;
-  if (status >= 400 && status < 500) return false;
-  return failureCount < 2;
-}
-
 export function useFeeSummaryQuery(studentId) {
   return useQuery({
     queryKey: [SUMMARY_ROOT, safeId(studentId)],
     queryFn: async () => {
       const response = await fetchFeeSummary(studentId);
       return summarizeDues(response?.data ?? response);
-    },
-    enabled: Boolean(studentId),
-    retry: retryTransientOnly,
-  });
-}
-
-export function useLedgerQuery(studentId) {
-  return useQuery({
-    queryKey: [LEDGER_ROOT, safeId(studentId)],
-    queryFn: async () => {
-      const response = await fetchLedger(studentId);
-      const body = response?.data ?? response;
-      return {
-        student: body?.student ?? null,
-        entries: body?.entries ?? [],
-        summary: body?.summary ?? null,
-      };
     },
     enabled: Boolean(studentId),
     retry: retryTransientOnly,
@@ -221,6 +188,9 @@ function useInvalidateStudentMoney() {
     const id = safeId(studentId);
     queryClient.invalidateQueries({ queryKey: [SUMMARY_ROOT, id] });
     queryClient.invalidateQueries({ queryKey: [LEDGER_ROOT, id] });
+    // The statement is keyed by date range too, so invalidate every range for
+    // this student rather than guessing which one the Ledger page is showing.
+    queryClient.invalidateQueries({ queryKey: [STATEMENT_ROOT, id] });
     queryClient.invalidateQueries({ queryKey: [STUDENT_FEES_ROOT, "byStudent", id] });
     queryClient.invalidateQueries({ queryKey: [PAYMENTS_ROOT] });
   };

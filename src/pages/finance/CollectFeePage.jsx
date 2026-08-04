@@ -26,9 +26,9 @@ import {
   useCollectPayment,
   useFeeSummaryQuery,
   useGenerateFeeCharges,
-  useLedgerQuery,
   useStudentAssignedFeesQuery,
 } from "../../features/finance/useCollection";
+import { useLedgerQuery } from "../../features/finance/useLedger";
 
 const STEPS = [
   { key: "student", label: "Student" },

@@ -34,3 +34,18 @@ export function apiErrorMessage(err, fallback, missingEndpointMessage) {
 
   return (typeof text === "string" && text.trim()) || fallback;
 }
+
+/**
+ * React Query retry policy for endpoints that can legitimately 4xx.
+ *
+ * The default (three retries) is wrong for all of them: a 404 (endpoint absent,
+ * or unknown record) and a 403 (wrong role) answer the same on the fourth
+ * attempt as the first. Retrying only makes the failure take four times as long
+ * to surface and triples the console noise. Retry genuine blips — network drops
+ * and 5xx — and nothing else.
+ */
+export function retryTransientOnly(failureCount, error) {
+  const status = error?.response?.status;
+  if (status >= 400 && status < 500) return false;
+  return failureCount < 2;
+}

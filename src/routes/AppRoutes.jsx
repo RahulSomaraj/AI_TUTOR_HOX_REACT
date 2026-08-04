@@ -26,6 +26,7 @@ import FeeTypesPage from "../pages/finance/FeeTypesPage";
 import FeeStructurePage from "../pages/finance/FeeStructurePage";
 import StudentFeeAssignmentPage from "../pages/finance/StudentFeeAssignmentPage";
 import CollectFeePage from "../pages/finance/CollectFeePage";
+import StudentLedgerPage from "../pages/finance/StudentLedgerPage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -86,6 +87,7 @@ function AppRoutes() {
           <Route path="finance/fee-structures" element={<FeeStructurePage />} />
           <Route path="finance/student-fees" element={<StudentFeeAssignmentPage />} />
           <Route path="finance/collect" element={<CollectFeePage />} />
+          <Route path="finance/ledger" element={<StudentLedgerPage />} />
         </Route>
       </Route>
 
