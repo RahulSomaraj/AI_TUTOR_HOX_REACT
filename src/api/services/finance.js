@@ -62,6 +62,21 @@ export async function createClassFee(payload) {
     return data;
 }
 
+/**
+ * Partial merge — send only what changes.
+ *
+ * ⚠️ The (feeStructureId, gradeId) uniqueness is NOT re-checked on update, so
+ * repointing a mapping onto a pair that already exists surfaces a raw database
+ * error instead of a clean 409. Don't offer "change the grade" on an existing
+ * mapping — delete and recreate instead. We only ever send `isActive` here.
+ */
+export async function updateClassFee(id, payload) {
+    const { data } = await api.put(`/class-fees/${id}`, payload);
+    return data;
+}
+
+/** Soft delete. Note the response has NO nested relations, unlike every other
+ *  class-fee endpoint — don't read `data.feeStructure` off it. */
 export async function deleteClassFee(id) {
     const { data } = await api.delete(`/class-fees/${id}`);
     return data;

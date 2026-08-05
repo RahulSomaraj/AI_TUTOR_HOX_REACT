@@ -24,7 +24,7 @@ import AttendancePage from "../pages/AttendancePage";
 import FeeManagementPage from "../pages/finance/FeeManagementPage";
 import FeeTypesPage from "../pages/finance/FeeTypesPage";
 import FeeStructurePage from "../pages/finance/FeeStructurePage";
-import StudentFeeAssignmentPage from "../pages/finance/StudentFeeAssignmentPage";
+import FeeAssignmentPage from "../pages/finance/FeeAssignmentPage";
 import CollectFeePage from "../pages/finance/CollectFeePage";
 import StudentLedgerPage from "../pages/finance/StudentLedgerPage";
 
@@ -85,7 +85,12 @@ function AppRoutes() {
           <Route path="finance" element={<FeeManagementPage />} />
           <Route path="finance/fee-types" element={<FeeTypesPage />}/>
           <Route path="finance/fee-structures" element={<FeeStructurePage />} />
-          <Route path="finance/student-fees" element={<StudentFeeAssignmentPage />} />
+          <Route path="finance/fee-assignment" element={<FeeAssignmentPage />} />
+          {/* Renamed — the page covers class assignment too now. Keeps old links alive. */}
+          <Route
+            path="finance/student-fees"
+            element={<Navigate to="/finance/fee-assignment" replace />}
+          />
           <Route path="finance/collect" element={<CollectFeePage />} />
           <Route path="finance/ledger" element={<StudentLedgerPage />} />
         </Route>

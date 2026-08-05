@@ -50,7 +50,7 @@ const navGroups = [
     items: [
       { label: "Fee Types", icon: Tag, path: "/finance/fee-types" },
       { label: "Fee Structures", icon: Layers, path: "/finance/fee-structures" },
-      { label: "Student Fee Assignment", icon: ClipboardList, path: "/finance/student-fees" },
+      { label: "Fee Assignment", icon: ClipboardList, path: "/finance/fee-assignment" },
       { label: "Fee Collection", icon: Coins, path: "/finance/collect" },
       { label: "Student Ledger", icon: ReceiptText, path: "/finance/ledger" },
       { label: "Reports", icon: BarChart3, path: "/finance/reports" },

@@ -13,7 +13,7 @@ import Breadcrumb from "../../components/ui/Breadcrumb";
 const sections = [
     { label: "Fee Types", desc: "Define fee categories (Tuition, Admission, Exam...).", icon: Tag, path: "/finance/fee-types" },
     { label: "Fee Structures", desc: "Bundle fee types into class/school-scoped plans.", icon: Layers, path: "/finance/fee-structures" },
-    { label: "Student Fee Assignment", desc: "Assign structures to students and view dues.", icon: ClipboardList, path: "/finance/student-fees" },
+    { label: "Fee Assignment", desc: "Assign fees to a whole class or to individual students.", icon: ClipboardList, path: "/finance/fee-assignment" },
     { label: "Fee Collection", desc: "Record payments and download receipts.", icon: Coins, path: "/finance/collect" },
     { label: "Student Ledger", desc: "Running credit/debit statement per student.", icon: ReceiptText, path: "/finance/ledger" },
     { label: "Reports", desc: "Collection and outstanding summaries.", icon: BarChart3, path: "/finance/reports" }

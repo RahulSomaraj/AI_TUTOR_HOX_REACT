@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import PaginationControls from "../../components/PaginationControls";
-import PageHeader from "../../components/ui/PageHeader";
-import Breadcrumb from "../../components/ui/Breadcrumb";
-import DataTable from "../../components/ui/DataTable";
-import SchoolScopeSelect from "../../components/Finance/SchoolScopeSelect";
+import PaginationControls from "../PaginationControls";
+import DataTable from "../ui/DataTable";
+import SchoolScopeSelect from "./SchoolScopeSelect";
 import { fetchAllStudents } from "../../api/services/students";
 import { fetchClasses } from "../../api/services/grades";
 import { extractList, extractPagination, safeId } from "../../api/normalize";
@@ -52,7 +50,15 @@ function gradeLabel(grade) {
     return grade?.aliasName || grade?.divisionName || `Grade ${grade?.id}`;
 }
 
-export default function StudentFeeAssignmentPage() {
+/**
+ * Per-student assignment: pick a fee structure, then tick individual students
+ * (or the whole class) to attach it to.
+ *
+ * Note this still works through a ClassFee under the hood — `useEnsureClassFee`
+ * creates the structure↔grade link on first use so the caller doesn't have to
+ * know it exists. The Class panel manages those links directly.
+ */
+export default function StudentFeeAssignmentPanel() {
     const [schoolId, setSchoolId] = useState("");
     const [gradeId, setGradeId] = useState("");
     const [feeStructureId, setFeeStructureId] = useState("");
@@ -272,13 +278,7 @@ export default function StudentFeeAssignmentPage() {
     ];
 
     return (
-        <div className="ty-page-shell">
-            <Breadcrumb items={[{ label: "Fee Management", path: "/finance" }, { label: "Student Fee Assignment" }]} />
-            <PageHeader
-                title="Student Fee Assignment"
-                subtitle={ready ? `${totalStudents} Students` : "Pick a school, class, and fee structure to begin"}
-            />
-
+        <>
             <div className="mb-6 grid gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 md:grid-cols-3">
                 <div>
                     <span className="mb-1 block text-sm font-medium text-slate-700">School *</span>
@@ -336,7 +336,7 @@ export default function StudentFeeAssignmentPage() {
             <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-[24px] font-semibold leading-none tracking-[0] text-[#20242a]">
-                        Students
+                        {ready ? `Students (${totalStudents})` : "Students"}
                     </h2>
 
                     {ready && (
@@ -396,6 +396,6 @@ export default function StudentFeeAssignmentPage() {
                     </>
                 )}
             </section>
-        </div>
+        </>
     );
 }
