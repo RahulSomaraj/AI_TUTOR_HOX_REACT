@@ -83,6 +83,15 @@ export async function deleteClassFee(id) {
 }
 
 // ─── Student fees (class fee ↔ student) ─────────────────────────────────────
+
+/**
+ * @param {{page?:number, limit?:number, studentId?:number, classFeeId?:number}} params
+ *
+ * `classFeeId` is the filter this app cares about — it replaced fetching every
+ * student-fee row in the system and narrowing in the browser. Omitting
+ * page/limit returns the complete set for the filter, which is what the
+ * assignment screen needs to mark who's already assigned.
+ */
 export async function fetchStudentFees(params = {}) {
     const { data } = await api.get('/student-fees', { params });
     return data;

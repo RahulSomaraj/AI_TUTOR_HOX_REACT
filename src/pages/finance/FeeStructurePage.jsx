@@ -8,6 +8,7 @@ import DataTable from "../../components/ui/DataTable";
 import ActionMenu from "../../components/ui/ActionMenu";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import MoneyInput from "../../components/Finance/MoneyInput";
+import SchoolScopeSelect from "../../components/Finance/SchoolScopeSelect";
 import useDebounce from "../../hooks/useDebounce";
 import { safeId } from "../../api/normalize";
 import { formatINR, parseAmount } from "../../lib/currency";
@@ -269,6 +270,7 @@ export default function FeeStructurePage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(PAGE_SIZE);
     const [search, setSearch] = useState("");
+    const [filterSchoolId, setFilterSchoolId] = useState("");
     const [modalMode, setModalMode] = useState(null);
     const [activeStructure, setActiveStructure] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -280,6 +282,9 @@ export default function FeeStructurePage() {
         page,
         limit: pageSize,
         search: debouncedSearch,
+        // Filters through academicYear.schoolId — a fee structure has no school
+        // of its own, it inherits one from the year it belongs to.
+        schoolId: filterSchoolId ? Number(filterSchoolId) : undefined,
     });
     const feeTypeOptionsQuery = useFeeTypeOptionsQuery();
     const academicYearOptionsQuery = useAcademicYearOptionsQuery();
@@ -451,15 +456,30 @@ export default function FeeStructurePage() {
                 onAction={openAddModal}
             />
 
-            <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5">
+            <div className="mb-6 flex flex-col gap-4 rounded-[18px] bg-white px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
                 <SearchInput
                     value={search}
                     onChange={(value) => {
                         setSearch(value);
                         setPage(1);
                     }}
-                    placeholder="Search by fee type or academic year..."
+                    // Server-side search covers the fee type's name and code.
+                    // Scoping by year is the school filter plus the year shown
+                    // on each row, not a substring match.
+                    placeholder="Search by fee type name or code..."
                 />
+
+                {/* A dropdown rather than free text: school names are long and
+                    exact, so picking beats typing. */}
+                <div className="w-full lg:w-[260px]">
+                    <SchoolScopeSelect
+                        value={filterSchoolId}
+                        onChange={(nextId) => {
+                            setFilterSchoolId(nextId);
+                            setPage(1);
+                        }}
+                    />
+                </div>
             </div>
 
             <section className="rounded-[18px] bg-white px-5 py-6 shadow-[0_8px_24px_rgba(18,53,64,0.06)] sm:px-6 sm:py-7">

@@ -3,7 +3,6 @@ import {
   buildStatementParams,
   entryTypeLabel,
   mapStatementRows,
-  paginateRows,
   summarizeStatement,
 } from "./useLedger";
 
@@ -103,40 +102,6 @@ describe("summarizeStatement", () => {
   });
 });
 
-describe("paginateRows", () => {
-  const rows = Array.from({ length: 45 }, (_, index) => ({ key: `r${index}` }));
-
-  it("slices the requested page", () => {
-    const result = paginateRows(rows, 2, 20);
-    expect(result.rows).toHaveLength(20);
-    expect(result.rows[0].key).toBe("r20");
-    expect(result.pagination).toMatchObject({ currentPage: 2, totalPages: 3, totalCount: 45 });
-  });
-
-  it("returns the remainder on the last page", () => {
-    const result = paginateRows(rows, 3, 20);
-    expect(result.rows).toHaveLength(5);
-    expect(result.pagination).toMatchObject({ hasNext: false, hasPrev: true });
-  });
-
-  // Shrinking a filtered result set can strand the user past the last page.
-  it("clamps a page number beyond the end", () => {
-    const result = paginateRows(rows, 99, 20);
-    expect(result.pagination.currentPage).toBe(3);
-    expect(result.rows).toHaveLength(5);
-  });
-
-  it("clamps a page number below one", () => {
-    expect(paginateRows(rows, 0, 20).pagination.currentPage).toBe(1);
-  });
-
-  it("reports one page for an empty list rather than zero", () => {
-    const result = paginateRows([], 1, 20);
-    expect(result.rows).toEqual([]);
-    expect(result.pagination).toMatchObject({ totalPages: 1, totalCount: 0, hasNext: false });
-  });
-});
-
 describe("buildStatementParams", () => {
   it("omits absent bounds entirely — forbidNonWhitelisted rejects empty strings", () => {
     expect(buildStatementParams({ from: "", to: "" })).toEqual({});
@@ -147,6 +112,19 @@ describe("buildStatementParams", () => {
     const params = buildStatementParams({ from: "2026-07-01", to: "" });
     expect(params.from).toMatch(/^2026-0[67]-\d{2}T/);
     expect(params).not.toHaveProperty("to");
+  });
+
+  // Pagination is opt-in: omitting both is how the exports ask for the whole
+  // period rather than whichever page is on screen.
+  it("omits page and limit when not given", () => {
+    const params = buildStatementParams({ from: "2026-07-01" });
+    expect(params).not.toHaveProperty("page");
+    expect(params).not.toHaveProperty("limit");
+  });
+
+  it("passes page and limit through, clamped to the server maximum", () => {
+    expect(buildStatementParams({ page: 3, limit: 20 })).toMatchObject({ page: 3, limit: 20 });
+    expect(buildStatementParams({ limit: 500 }).limit).toBe(50);
   });
 });
 

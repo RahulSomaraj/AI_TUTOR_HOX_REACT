@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Printer, X } from "lucide-react";
 import PageHeader from "../../components/ui/PageHeader";
@@ -13,7 +13,11 @@ import { apiErrorMessage } from "../../lib/apiError";
 import { formatINR } from "../../lib/currency";
 import { downloadCsv, toCsv } from "../../lib/csv";
 import { fromPaise } from "../../lib/money";
-import { paginateRows, useLedgerQuery, useStatementQuery } from "../../features/finance/useLedger";
+import {
+  fetchFullStatement,
+  useLedgerQuery,
+  useStatementQuery,
+} from "../../features/finance/useLedger";
 
 const LEDGER_UNAVAILABLE =
   "The student ledger isn't available on this server yet — the endpoint returned 404. It's built but not deployed.";
@@ -65,6 +69,8 @@ export default function StudentLedgerPage() {
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   const studentId = student?.id ?? "";
   const hasRange = Boolean(from || to);
@@ -78,7 +84,7 @@ export default function StudentLedgerPage() {
     enabled: Boolean(schoolId),
   });
 
-  const statementQuery = useStatementQuery(studentId, { from, to });
+  const statementQuery = useStatementQuery(studentId, { from, to, page, limit: pageSize });
 
   // The statement's closing balance is the balance at the *end of the range*,
   // which is not the student's current position once a range is applied. Fetch
@@ -86,13 +92,11 @@ export default function StudentLedgerPage() {
   // actually owed today rather than a historical figure.
   const ledgerQuery = useLedgerQuery(hasRange ? studentId : "");
 
-  const allRows = statementQuery.data?.rows ?? NO_ROWS;
+  // One page of rows. Aggregates below still describe the whole period — the
+  // API guarantees that, so the header stays correct on any page.
+  const rows = statementQuery.data?.rows ?? NO_ROWS;
   const summary = statementQuery.data?.summary;
-
-  const { rows, pagination } = useMemo(
-    () => paginateRows(allRows, page, pageSize),
-    [allRows, page, pageSize]
-  );
+  const pagination = statementQuery.data?.pagination;
 
   const currentBalancePaise = hasRange
     ? ledgerQuery.data?.summary?.balance
@@ -120,13 +124,31 @@ export default function StudentLedgerPage() {
     setPage(1);
   }
 
-  function handleDownloadCsv() {
+  async function handleDownloadCsv() {
+    setExporting(true);
+    setExportError("");
+    let full;
+    try {
+      // Re-fetch without paging. Exporting `rows` would silently ship whichever
+      // page happens to be on screen, which looks like a complete statement and
+      // isn't — the worst kind of wrong for a financial document.
+      full = await fetchFullStatement(studentId, { from, to });
+    } catch (err) {
+      setExportError(apiError(err, "Couldn't build the statement for download"));
+      setExporting(false);
+      return;
+    } finally {
+      setExporting(false);
+    }
+
     const periodLabel =
-      [formatDay(summary?.from) ?? "Start", formatDay(summary?.to) ?? "Today"].join(" to ");
+      [formatDay(full.summary?.from) ?? "Start", formatDay(full.summary?.to) ?? "Today"].join(
+        " to "
+      );
 
     // Money goes out as the plain "1500.00" shape rather than the formatted
     // "₹1,500.00" — a spreadsheet has to be able to sum this column.
-    const body = allRows.map((row) => [
+    const body = full.rows.map((row) => [
       formatDay(row.date) ?? "",
       row.description,
       row.typeLabel,
@@ -140,10 +162,10 @@ export default function StudentLedgerPage() {
       ["Student", student?.name ?? ""],
       ["Student Code", student?.studentCode ?? ""],
       ["Period", periodLabel],
-      ["Opening Balance", fromPaise(summary?.openingBalance ?? 0)],
-      ["Total Charged", fromPaise(summary?.totalCredit ?? 0)],
-      ["Total Paid / Adjusted", fromPaise(summary?.totalDebit ?? 0)],
-      ["Closing Balance", fromPaise(summary?.closingBalance ?? 0)],
+      ["Opening Balance", fromPaise(full.summary?.openingBalance ?? 0)],
+      ["Total Charged", fromPaise(full.summary?.totalCredit ?? 0)],
+      ["Total Paid / Adjusted", fromPaise(full.summary?.totalDebit ?? 0)],
+      ["Closing Balance", fromPaise(full.summary?.closingBalance ?? 0)],
     ];
 
     const csv = toCsv(
@@ -155,8 +177,10 @@ export default function StudentLedgerPage() {
     downloadCsv(`statement-${safeName}.csv`, csv);
   }
 
-  const startRow = pagination.totalCount === 0 ? 0 : (pagination.currentPage - 1) * pageSize + 1;
-  const endRow = Math.min(pagination.currentPage * pageSize, pagination.totalCount);
+  const totalCount = pagination?.totalCount ?? rows.length;
+  const currentPage = pagination?.currentPage ?? page;
+  const startRow = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endRow = Math.min(currentPage * pageSize, totalCount);
 
   return (
     <div className="ty-page-shell">
@@ -293,27 +317,49 @@ export default function StudentLedgerPage() {
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handleDownloadCsv}
-                  disabled={allRows.length === 0}
-                  className="inline-flex items-center gap-2 rounded border border-[#155966] px-4 py-2.5 text-sm font-semibold text-[#155966] transition hover:bg-[#eef6f9] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Download size={16} />
-                  Download CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  disabled={allRows.length === 0}
-                  className="inline-flex items-center gap-2 rounded bg-[#155966] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#104a55] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Printer size={16} />
-                  Print / Save as PDF
-                </button>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleDownloadCsv}
+                    disabled={rows.length === 0 || exporting}
+                    title="Downloads the whole period, not just this page"
+                    className="inline-flex items-center gap-2 rounded border border-[#155966] px-4 py-2.5 text-sm font-semibold text-[#155966] transition hover:bg-[#eef6f9] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {exporting ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                    {exporting ? "Preparing..." : "Download CSV"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    disabled={rows.length === 0}
+                    className="inline-flex items-center gap-2 rounded bg-[#155966] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#104a55] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer size={16} />
+                    Print / Save as PDF
+                  </button>
+                </div>
+
+                {/* Rows are paged server-side now, so print only sees what's on
+                    screen. Say so rather than let someone file a one-page
+                    statement believing it's complete. */}
+                {(pagination?.totalPages ?? 1) > 1 && (
+                  <p className="text-[11.5px] text-[#8b939b]">
+                    Print covers this page only — use CSV for the full statement.
+                  </p>
+                )}
               </div>
             </div>
+
+            {exportError && (
+              <div className="ledger-no-print mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {exportError}
+              </div>
+            )}
 
             <div id="ledger-print-area">
               <div className="mb-4">
@@ -343,16 +389,18 @@ export default function StudentLedgerPage() {
               />
             </div>
 
-            {!statementQuery.isPending && !loadError && pagination.totalCount > pageSize && (
+            {!statementQuery.isPending && !loadError && totalCount > pageSize && (
               <PaginationControls
                 className="ledger-no-print mt-6"
-                rangeLabel={`${startRow}-${endRow} of ${pagination.totalCount}`}
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                hasPrev={pagination.hasPrev}
-                hasNext={pagination.hasNext}
+                rangeLabel={`${startRow}-${endRow} of ${totalCount}`}
+                currentPage={currentPage}
+                totalPages={pagination?.totalPages ?? 1}
+                hasPrev={pagination?.hasPrev ?? currentPage > 1}
+                hasNext={pagination?.hasNext ?? false}
                 onPrev={() => setPage((value) => Math.max(value - 1, 1))}
-                onNext={() => setPage((value) => Math.min(value + 1, pagination.totalPages))}
+                onNext={() =>
+                  setPage((value) => Math.min(value + 1, pagination?.totalPages || value + 1))
+                }
                 rowsPerPage={pageSize}
                 rowsPerPageOptions={[20, 50, 100]}
                 onRowsPerPageChange={(value) => {

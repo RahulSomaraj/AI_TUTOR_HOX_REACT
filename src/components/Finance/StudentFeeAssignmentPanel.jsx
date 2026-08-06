@@ -20,6 +20,10 @@ import {
 
 const PAGE_SIZE = 10;
 
+// Stable identity so the row memo below doesn't re-run on every render while
+// the query is still settling.
+const EMPTY_ROWS = [];
+
 function apiError(err, fallback) {
     return (
         err?.response?.data?.message ||
@@ -71,7 +75,6 @@ export default function StudentFeeAssignmentPanel() {
     const gradeOptionsQuery = useGradeOptionsQuery(schoolId);
     const feeStructureOptionsQuery = useFeeStructureOptionsQuery();
     const classFeesQuery = useClassFeesByGradeQuery(gradeId);
-    const studentFeesQuery = useStudentFeesQuery();
 
     const ensureClassFee = useEnsureClassFee();
     const assignMutation = useAssignStudentFee();
@@ -105,12 +108,9 @@ export default function StudentFeeAssignmentPanel() {
         [classFeesQuery.data, feeStructureId]
     );
 
-    const studentFeesForClassFee = useMemo(() => {
-        if (!classFee) return [];
-        return (studentFeesQuery.data ?? []).filter(
-            (sf) => safeId(sf?.classFeeId ?? sf?.classFee?.id) === safeId(classFee.id)
-        );
-    }, [studentFeesQuery.data, classFee]);
+    // Filtered server-side by classFeeId now, so no client-side narrowing.
+    const studentFeesQuery = useStudentFeesQuery(classFee?.id);
+    const studentFeesForClassFee = studentFeesQuery.data ?? EMPTY_ROWS;
 
     const students = studentsQuery.data?.raw;
     const pagination = studentsQuery.data?.pagination;

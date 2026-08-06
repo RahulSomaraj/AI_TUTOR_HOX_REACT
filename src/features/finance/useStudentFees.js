@@ -9,16 +9,25 @@ import { extractList, safeId } from "../../api/normalize";
 
 const STUDENT_FEES_ROOT = "studentFees";
 
-// The backend has no "assigned students for this class-fee" endpoint — only a
-// full, unpaginated /student-fees list (matches the rest of fee-management).
-// Callers filter this client-side by classFeeId.
-export function useStudentFeesQuery() {
+/**
+ * The student-fee rows for one class-fee.
+ *
+ * `classFeeId` is now a server-side filter. This used to fetch every
+ * student-fee row in the system and filter in the browser, which grew as
+ * students × fees — tens of thousands of rows to render ten.
+ *
+ * Deliberately unpaginated: the caller cross-references this against a page of
+ * students to mark who's already assigned, so it needs every row for the
+ * class-fee, not the first ten. Bounded by class size, so that's cheap.
+ */
+export function useStudentFeesQuery(classFeeId) {
   return useQuery({
-    queryKey: [STUDENT_FEES_ROOT],
+    queryKey: [STUDENT_FEES_ROOT, "byClassFee", safeId(classFeeId)],
     queryFn: async () => {
-      const response = await fetchStudentFees();
+      const response = await fetchStudentFees({ classFeeId: Number(classFeeId) });
       return extractList(response, ["studentFees"]);
     },
+    enabled: Boolean(classFeeId),
   });
 }
 

@@ -6,46 +6,32 @@ import {
     updateFeeStructure,
 } from "../../api/services/finance";
 import { fetchAcademicYears } from "../../api/services/academicYears";
-import { extractList } from "../../api/normalize";
+import { extractList, extractPagination } from "../../api/normalize";
+import { buildListParams } from "../../api/listParams";
 
 const FEE_STRUCTURES_ROOT = "feeStructures";
 export const feeStructuresKey = (params) => [FEE_STRUCTURES_ROOT, params];
 
-export function selectFeeStructures(all, { page, limit, search }) {
-  const term = search?.trim().toLowerCase();
-  const filtered = all.filter((item) => {
-    if (!term) return true;
-    return (
-      item?.feeType?.name?.toLowerCase().includes(term) ||
-      item?.feeType?.code?.toLowerCase().includes(term) ||
-      item?.academicYear?.name?.toLowerCase().includes(term)
-    );
-  });
-
-  const totalCount = filtered.length;
-  const totalPages = Math.max(Math.ceil(totalCount / limit), 1);
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * limit;
-
-  return {
-    raw: filtered.slice(start, start + limit),
-    pagination: {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize: limit,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    },
-  };
-}
-
+/**
+ * Server-side paging, search and filtering.
+ *
+ * `search` matches the fee type's name or code. Note it no longer matches the
+ * academic year's name, as the old client-side filter did — the server-side
+ * search covers the fee type only. Scoping by year is now the `academicYearId`
+ * filter, which is exact rather than a substring guess.
+ *
+ * `schoolId` filters through `academicYear.schoolId`: a fee structure has no
+ * school of its own, it inherits one from the year it belongs to.
+ */
 export function useFeeStructuresQuery(params) {
   return useQuery({
     queryKey: feeStructuresKey(params),
     queryFn: async () => {
-      const response = await fetchFeeStructures();
-      return selectFeeStructures(extractList(response, ["feeStructures"]), params);
+      const response = await fetchFeeStructures(buildListParams(params));
+      return {
+        raw: extractList(response, ["feeStructures"]),
+        pagination: extractPagination(response, 0, params?.limit),
+      };
     },
     placeholderData: (previous) => previous,
   });

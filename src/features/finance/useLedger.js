@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchLedger, fetchStatement } from "../../api/services/ledger";
 import { safeId } from "../../api/normalize";
 import { retryTransientOnly } from "../../lib/apiError";
+import { MAX_PAGE_SIZE } from "../../api/listParams";
 import { toPaise } from "../../lib/money";
 
 export const LEDGER_ROOT = "ledger";
@@ -57,34 +58,18 @@ export function summarizeStatement(statement) {
 }
 
 /**
- * Client-side pagination. These endpoints return the complete non-deleted set
- * with no `pagination` object and no page/limit params, so a student with a
- * long history arrives in one response and the slicing has to happen here.
+ * Drop empty range bounds — sending `from: ""` trips `forbidNonWhitelisted`.
+ *
+ * Omitting `page`/`limit` is meaningful, not an oversight: pagination is
+ * opt-in, and without it the endpoint returns the complete statement. That's
+ * what the CSV and print exports need.
  */
-export function paginateRows(rows = [], page = 1, pageSize = 15) {
-  const totalCount = rows.length;
-  const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
-  const currentPage = Math.min(Math.max(page, 1), totalPages);
-  const start = (currentPage - 1) * pageSize;
-
-  return {
-    rows: rows.slice(start, start + pageSize),
-    pagination: {
-      currentPage,
-      totalPages,
-      totalCount,
-      pageSize,
-      hasPrev: currentPage > 1,
-      hasNext: currentPage < totalPages,
-    },
-  };
-}
-
-/** Drop empty range bounds — sending `from: ""` trips `forbidNonWhitelisted`. */
-export function buildStatementParams({ from, to } = {}) {
+export function buildStatementParams({ from, to, page, limit } = {}) {
   const params = {};
   if (from) params.from = new Date(from).toISOString();
   if (to) params.to = new Date(to).toISOString();
+  if (page) params.page = Number(page);
+  if (limit) params.limit = Math.min(Number(limit), MAX_PAGE_SIZE);
   return params;
 }
 
@@ -119,18 +104,38 @@ export function useLedgerQuery(studentId) {
 export function useStatementQuery(studentId, range) {
   const params = buildStatementParams(range);
   return useQuery({
-    queryKey: [STATEMENT_ROOT, safeId(studentId), params.from ?? "", params.to ?? ""],
+    queryKey: [STATEMENT_ROOT, safeId(studentId), params],
     queryFn: async () => {
       const response = await fetchStatement(studentId, params);
       const body = response?.data ?? response;
       return {
         student: body?.student ?? null,
         rows: mapStatementRows(body),
+        // openingBalance / closingBalance / totals always describe the whole
+        // requested period, never the page — so a header rendered beside page 3
+        // is still correct. Never sum the visible rows to get a total.
         summary: summarizeStatement(body),
+        pagination: body?.pagination ?? response?.pagination ?? null,
       };
     },
     enabled: Boolean(studentId),
     retry: retryTransientOnly,
     placeholderData: (previous) => previous,
   });
+}
+
+/**
+ * The complete statement for a period, regardless of what page the table is on.
+ *
+ * Exports must not silently ship one page. This is a one-off fetch on click
+ * rather than a second always-live query, so the cost is only paid when someone
+ * actually downloads or prints.
+ */
+export async function fetchFullStatement(studentId, range) {
+  const { page, limit, ...rest } = range ?? {};
+  void page;
+  void limit;
+  const response = await fetchStatement(studentId, buildStatementParams(rest));
+  const body = response?.data ?? response;
+  return { rows: mapStatementRows(body), summary: summarizeStatement(body) };
 }
