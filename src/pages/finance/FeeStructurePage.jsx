@@ -325,6 +325,19 @@ export default function FeeStructurePage() {
         [academicYearOptionsQuery.data]
     );
 
+    // A fee structure's nested `academicYear` carries `schoolId` but no school
+    // name, and "2026-2027" alone is ambiguous once two schools each have a year
+    // by that name. The academic-years list is already loaded for the modal's
+    // dropdown and does include the school, so resolve the name from there
+    // rather than firing another request.
+    const schoolNameByYearId = useMemo(() => {
+        const map = new Map();
+        (academicYearOptionsQuery.data ?? []).forEach((year) => {
+            map.set(safeId(year?.id), year?.school?.schoolName ?? "");
+        });
+        return map;
+    }, [academicYearOptionsQuery.data]);
+
     function openAddModal() {
         setActiveStructure(null);
         setModalMode("add");
@@ -363,7 +376,26 @@ export default function FeeStructurePage() {
             header: "Fee Type",
             render: (row) => <span className="font-medium text-[#2a2d32]">{row.feeTypeName}</span>,
         },
-        { key: "yearName", header: "Academic Year" },
+        {
+            key: "yearName",
+            header: "Academic Year",
+            // School goes underneath rather than in its own column — school
+            // names are long, and a sixth column would crowd the row for
+            // information that's really a qualifier on the year.
+            render: (row) => {
+                const schoolName = schoolNameByYearId.get(row.academicYearId);
+                return (
+                    <div className="min-w-0">
+                        <span className="block text-[15px] text-[#2a2d32]">{row.yearName}</span>
+                        {schoolName && (
+                            <span className="mt-0.5 block truncate text-[12.5px] text-[#8b939b]">
+                                {schoolName}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
+        },
         {
             key: "amount",
             header: "Amount",
@@ -493,6 +525,11 @@ export default function FeeStructurePage() {
                             Are you sure you want to delete the fee structure for{" "}
                             <span className="font-semibold text-[#20242a]">
                                 {deleteTarget.feeTypeName} — {deleteTarget.yearName}
+                                {/* Naming the school matters most here: two schools can
+                                    each have a '2026-2027', and this is irreversible. */}
+                                {schoolNameByYearId.get(deleteTarget.academicYearId)
+                                    ? ` (${schoolNameByYearId.get(deleteTarget.academicYearId)})`
+                                    : ""}
                             </span>
                             ?
                         </>
