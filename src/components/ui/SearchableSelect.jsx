@@ -10,7 +10,7 @@ import useDebounce from "../../hooks/useDebounce";
  */
 export default function SearchableSelect({
   value,
-  onChange, 
+  onChange,
   onSearch,
   options = [],
   placeholder = "Select",
@@ -18,6 +18,9 @@ export default function SearchableSelect({
   disabled = false,
   loading = false,
   emptyLabel = "No results found",
+  // Rendered under the list — for telling the user results were capped, so a
+  // missing entry reads as "narrow your search" rather than "not in the system".
+  footnote = "",
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -122,6 +125,12 @@ export default function SearchableSelect({
               ))
             )}
           </div>
+
+          {footnote && !loading && (
+            <p className="border-t border-[#eef0f2] px-4 py-2 text-[11.5px] leading-snug text-[#8d969c]">
+              {footnote}
+            </p>
+          )}
         </div>
       )}
     </div>

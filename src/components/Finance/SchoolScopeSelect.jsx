@@ -4,7 +4,10 @@ import { fetchSchools } from "../../api/services/schools";
 import { extractList, safeId } from "../../api/normalize";
 import logger from "../../lib/logger";
 
-const DROPDOWN_LIMIT = 10;
+// The server caps `limit` at 50. 25 fills the dropdown without turning it into
+// a wall of names — this is a picker, not a browsing list. Anything past it is
+// reached by typing, not scrolling.
+const DROPDOWN_LIMIT = 25;
 const ALL_SCHOOLS = { value: "", id: "", label: "All Schools" };
 
 function mapSchoolOption(school) {
@@ -27,25 +30,35 @@ export default function SchoolScopeSelect({
 }) {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [truncated, setTruncated] = useState(false);
 
+  // Server-side search on every settled keystroke — SearchableSelect debounces
+  // the query (350ms) before calling this, so typing a long school name costs
+  // one request rather than one per character. Never loads the full list: a
+  // deployment with thousands of schools would otherwise pull all of them into
+  // memory to render ten.
   const search = useCallback(async (query = "") => {
     try {
       setLoading(true);
       const response = await fetchSchools({
         page: 1,
         limit: DROPDOWN_LIMIT,
-        order: "desc",
+        // Alphabetical, not newest-first: when someone types "Silver" they
+        // expect the matches in name order, not creation order.
+        order: "asc",
         schoolName: query.trim() || undefined,
       });
-      setSchools(extractList(response, ["schools"]).map(mapSchoolOption));
+      const list = extractList(response, ["schools"]);
+      setSchools(list.map(mapSchoolOption));
+      setTruncated(list.length >= DROPDOWN_LIMIT);
     } catch (err) {
       logger.error("Failed to load schools:", err);
       setSchools([]);
+      setTruncated(false);
     } finally {
       setLoading(false);
     }
   }, []);
-
 
   const options = useMemo(
     () => (includeAll ? [ALL_SCHOOLS, ...schools] : schools),
@@ -70,10 +83,15 @@ export default function SchoolScopeSelect({
       onSearch={search}
       options={options}
       placeholder={placeholder ?? (includeAll ? "All Schools" : "Select School")}
-      searchPlaceholder="Search school..."
+      searchPlaceholder="Search school by name..."
       disabled={disabled}
       loading={loading}
-      emptyLabel="No schools found"
+      emptyLabel="No schools match that name"
+      footnote={
+        truncated
+          ? `Showing the first ${DROPDOWN_LIMIT} matches — type more to narrow it down.`
+          : ""
+      }
     />
   );
 }
