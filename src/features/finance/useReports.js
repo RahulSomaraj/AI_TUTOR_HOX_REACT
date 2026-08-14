@@ -6,7 +6,7 @@ import {
   fetchFeeTypeCollection,
   fetchMonthlyCollection,
 } from "../../api/services/reports";
-import { safeId } from "../../api/normalize";
+import { extractList, extractPagination, safeId } from "../../api/normalize";
 import { retryTransientOnly } from "../../lib/apiError";
 import { toPaise } from "../../lib/money";
 
@@ -240,14 +240,21 @@ export function useDueStudentsQuery({ schoolId, gradeId, status, page, limit }) 
     queryKey: [REPORTS_ROOT, "dueStudents", params],
     queryFn: async () => {
       const response = await fetchDueStudents(params);
-      const body = response?.data ?? response;
-      // `pagination` sits beside `data` rather than inside it, and `summary`
-      // covers the whole filtered set, not just this page.
+
+      // This is the only paginated report, so it uses the flat envelope the
+      // rest of the API uses for lists: `data` holds the array, with `summary`
+      // and `pagination` as its siblings. The unpaginated reports nest
+      // everything under `data` instead — reading this one the same way found
+      // an array where an object was expected and silently produced zeroes.
+      const rows = extractList(response, ["students"]);
+      const summary = response?.summary ?? response?.data?.summary ?? {};
+
       return {
-        rows: mapDueStudentRows(Array.isArray(body?.data) ? body.data : []),
-        pagination: body?.pagination ?? response?.pagination ?? null,
-        totalStudents: body?.summary?.totalStudents ?? 0,
-        totalOutstanding: toPaise(body?.summary?.totalOutstanding),
+        rows: mapDueStudentRows(rows),
+        pagination: extractPagination(response, rows.length, params.limit),
+        // Covers the whole filtered set, not just this page.
+        totalStudents: summary.totalStudents ?? 0,
+        totalOutstanding: toPaise(summary.totalOutstanding),
       };
     },
     ...SHARED,

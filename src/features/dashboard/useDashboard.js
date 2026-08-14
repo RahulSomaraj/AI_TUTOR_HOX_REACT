@@ -5,7 +5,7 @@ import { fetchTeachers } from "../../api/services/teachers";
 import { fetchParents } from "../../api/services/parents";
 import { fetchClasses } from "../../api/services/grades";
 import { fetchDueStudents } from "../../api/services/reports";
-import { extractPagination } from "../../api/normalize";
+import { extractList, extractPagination } from "../../api/normalize";
 import { retryTransientOnly } from "../../lib/apiError";
 import { toPaise } from "../../lib/money";
 import { mapDueStudentRows } from "../finance/useReports";
@@ -75,11 +75,17 @@ export function useOutstandingSnapshot(limit = 6) {
     queryKey: [DASHBOARD_ROOT, "outstanding", limit],
     queryFn: async () => {
       const response = await fetchDueStudents({ page: 1, limit });
-      const body = response?.data ?? response;
+
+      // Flat list envelope: `data` is the array, `summary` sits beside it.
+      // See the note in useReports — reading it as a nested payload returns
+      // zeroes for a school that genuinely has dues.
+      const rows = extractList(response, ["students"]);
+      const summary = response?.summary ?? response?.data?.summary ?? {};
+
       return {
-        rows: mapDueStudentRows(Array.isArray(body?.data) ? body.data : []),
-        totalStudents: body?.summary?.totalStudents ?? 0,
-        totalOutstanding: toPaise(body?.summary?.totalOutstanding),
+        rows: mapDueStudentRows(rows),
+        totalStudents: summary.totalStudents ?? 0,
+        totalOutstanding: toPaise(summary.totalOutstanding),
       };
     },
     retry: retryTransientOnly,
