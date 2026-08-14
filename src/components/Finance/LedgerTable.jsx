@@ -50,6 +50,8 @@ export default function LedgerTable({
   totalCredit = 0,
   totalDebit = 0,
   showOpeningRow = false,
+  // Rows are paged server-side, so numbering has to continue across pages.
+  startIndex = 0,
   loading = false,
   error = "",
   emptyLabel = "No ledger entries in this period.",
@@ -79,6 +81,7 @@ export default function LedgerTable({
       <table className="w-full border-collapse" style={{ minWidth: 860 }}>
         <thead>
           <tr className="border-b border-[#edf0f2]">
+            <th className={`${headerCell} w-12 text-right`}>#</th>
             <th className={`${headerCell} text-left`}>Date</th>
             <th className={`${headerCell} text-left`}>Description</th>
             <th className={`${headerCell} text-left`}>Type</th>
@@ -97,6 +100,8 @@ export default function LedgerTable({
         <tbody>
           {showOpeningRow && (
             <tr className="border-b border-[#eef0f2] bg-[#f8fafb]">
+              {/* Not a numbered entry — it's the balance carried in. */}
+              <td className={`${bodyCell} w-12`} />
               <td className={bodyCell}>—</td>
               <td className={`${bodyCell} italic text-[#5b626a]`} colSpan={2}>
                 Opening balance
@@ -111,13 +116,16 @@ export default function LedgerTable({
 
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="py-16 text-center text-sm text-[#5b626a]">
+              <td colSpan={7} className="py-16 text-center text-sm text-[#5b626a]">
                 {emptyLabel}
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
+            rows.map((row, index) => (
               <tr key={row.key} className="border-b border-[#eef0f2]">
+                <td className={`${bodyCell} w-12 text-right tabular-nums text-[#9aa3aa]`}>
+                  {startIndex + index + 1}
+                </td>
                 <td className={`${bodyCell} whitespace-nowrap`}>{formatDate(row.date)}</td>
                 <td className={bodyCell}>{row.description}</td>
                 <td className={`${bodyCell} whitespace-nowrap text-[#5b626a]`}>{row.typeLabel}</td>
@@ -138,7 +146,7 @@ export default function LedgerTable({
         {rows.length > 0 && (
           <tfoot>
             <tr className="border-t-2 border-[#dde3e6] bg-[#f4f8f9]">
-              <td className={`${bodyCell} font-semibold text-[#20242a]`} colSpan={3}>
+              <td className={`${bodyCell} font-semibold text-[#20242a]`} colSpan={4}>
                 Closing balance
               </td>
               <td className={`${bodyCell} text-right`}>

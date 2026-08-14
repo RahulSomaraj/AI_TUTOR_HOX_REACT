@@ -844,6 +844,7 @@ export default function ChaptersPage() {
         </h2>
 
         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
           columns={columns}
           rows={rowsToShow}
           loading={loading}

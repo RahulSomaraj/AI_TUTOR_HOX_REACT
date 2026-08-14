@@ -342,6 +342,7 @@ export default function SchoolsPage() {
         </h2>
 
         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
           minWidth={920}
           rowKey={(row) => row.rowId}
           loading={loading}
@@ -356,7 +357,10 @@ export default function SchoolsPage() {
                 <button
                   type="button"
                   onClick={() => navigate(`/schools/${school.id}`)}
-                  className="font-medium text-[#155966] transition hover:underline"
+                  // text-left is load-bearing: a <button> centres its text by
+                  // default, which only shows once a long name wraps — short
+                  // names hug their content and look correctly aligned.
+                  className="text-left font-medium text-[#155966] transition hover:underline"
                 >
                   {school.name}
                 </button>

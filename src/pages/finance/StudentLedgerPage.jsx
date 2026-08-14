@@ -374,6 +374,7 @@ export default function StudentLedgerPage() {
 
               <LedgerTable
                 rows={rows}
+                startIndex={Math.max(startRow - 1, 0)}
                 openingBalance={summary?.openingBalance ?? 0}
                 closingBalance={summary?.closingBalance ?? 0}
                 totalCredit={summary?.totalCredit ?? 0}

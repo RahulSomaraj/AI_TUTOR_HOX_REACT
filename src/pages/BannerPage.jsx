@@ -383,6 +383,7 @@ export default function BannerPage() {
 
         <div className="px-5">
           <DataTable
+                    startIndex={(page - 1) * itemsPerPage}
             columns={columns}
             rows={banners}
             loading={loading}

@@ -755,6 +755,7 @@ export default function ClassesPage() {
 
         <div className="px-5">
           <DataTable
+                    startIndex={(page - 1) * itemsPerPage}
             columns={columns}
             rows={classes}
             loading={loading}

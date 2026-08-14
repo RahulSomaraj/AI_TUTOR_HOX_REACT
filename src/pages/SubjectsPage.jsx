@@ -805,6 +805,7 @@ export default function SubjectsPage() {
         </h2>
 
         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
           columns={columns}
           rows={subjects}
           loading={loading}

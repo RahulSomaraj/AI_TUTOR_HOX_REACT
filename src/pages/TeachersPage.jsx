@@ -701,6 +701,7 @@ export default function TeachersPage() {
         </h2>
 
         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
           columns={columns}
           rows={teachers}
           loading={loading}

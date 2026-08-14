@@ -424,6 +424,7 @@ export default function AcademicYearsPage() {
                 ) : (
                     <>
                         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
                             columns={columns}
                             rows={rows}
                             loading={loading}

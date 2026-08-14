@@ -417,6 +417,7 @@ export default function ReportsPage() {
         </div>
 
         <DataTable
+          startIndex={Math.max(startRow - 1, 0)}
           columns={dueColumns}
           rows={dueRows}
           loading={dueQuery.isPending}

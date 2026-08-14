@@ -915,6 +915,7 @@ export default function TopicsPage() {
         </h2>
 
         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
           minWidth={980}
           rowKey={(topic) => topic.id}
           columns={[

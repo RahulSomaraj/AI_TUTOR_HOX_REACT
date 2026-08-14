@@ -62,6 +62,9 @@ const AttendanceTable = ({ students, selectedDate, loading, type }) => {
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
+              <th className="w-12 px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                #
+              </th>
               {columns.map((h) => (
                 <th
                   key={h}
@@ -73,11 +76,14 @@ const AttendanceTable = ({ students, selectedDate, loading, type }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {students.map((student) => {
+            {students.map((student, index) => {
               const status     = student.attendance[dateStr];
               const statusInfo = statusConfig[status] ?? null;
               return (
                 <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="w-12 px-5 py-3.5 text-right text-sm tabular-nums text-gray-400">
+                    {index + 1}
+                  </td>
                   {/* Name + Avatar */}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">

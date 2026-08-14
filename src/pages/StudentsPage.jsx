@@ -763,6 +763,7 @@ export default function StudentsPage() {
         </h2>
 
         <DataTable
+                    startIndex={(page - 1) * itemsPerPage}
           columns={columns}
           rows={students}
           loading={loading}

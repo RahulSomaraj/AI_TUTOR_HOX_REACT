@@ -359,6 +359,7 @@ export default function FeeTypesPage() {
             </h2>
     
             <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
               columns={columns}
               rows={feeTypes}
               loading={loading}

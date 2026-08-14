@@ -454,6 +454,7 @@ export default function EducationBoardsPage() {
         </h2>
 
         <DataTable
+                    startIndex={Math.max(startRow - 1, 0)}
           columns={columns}
           rows={boards}
           loading={loading}

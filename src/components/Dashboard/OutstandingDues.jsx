@@ -65,7 +65,8 @@ export default function OutstandingDues() {
           <table className="min-w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-slate-100 text-left text-sm font-semibold text-slate-700">
-                <th className="rounded-l-2xl px-5 py-4">Student</th>
+                <th className="w-12 rounded-l-2xl px-5 py-4 text-right">#</th>
+                <th className="px-5 py-4">Student</th>
                 <th className="px-5 py-4">Roll No</th>
                 <th className="px-5 py-4 text-right">Outstanding</th>
                 <th className="px-5 py-4 text-right">Days Overdue</th>
@@ -74,8 +75,11 @@ export default function OutstandingDues() {
             </thead>
 
             <tbody>
-              {rows.map((row) => (
+              {rows.map((row, index) => (
                 <tr key={row.id} className="text-sm text-slate-600">
+                  <td className="w-12 border-b border-slate-100 px-5 py-5 text-right tabular-nums text-slate-400">
+                    {index + 1}
+                  </td>
                   <td className="border-b border-slate-100 px-5 py-5">
                     <span className="font-medium text-slate-700">{row.name}</span>
                     <span className="ml-2 text-xs text-slate-400">{row.studentCode}</span>

@@ -727,6 +727,7 @@ export default function ParentsPage() {
         </h2>
 
         <DataTable
+                    startIndex={(page - 1) * itemsPerPage}
           minWidth={960}
           loading={loading}
           rows={parents}

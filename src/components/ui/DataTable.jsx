@@ -13,6 +13,10 @@ export default function DataTable({
   emptyLabel = "No records found.",
   rowKey = (row, index) => row?.id ?? index,
   minWidth = 980,
+  numbered = true,
+  // Row 1 of page 2 should read 11, not 1. Paginated callers pass
+  // (page - 1) * pageSize; anything that shows a single page can ignore it.
+  startIndex = 0,
 }) {
   if (loading) {
     return (
@@ -42,6 +46,14 @@ export default function DataTable({
       <table className="w-full border-collapse" style={{ minWidth }}>
         <thead>
           <tr className="border-b border-[#edf0f2]">
+            {numbered && (
+              <th
+                scope="col"
+                className="w-12 px-3 py-4 text-right text-[16px] font-medium text-[#16191d]"
+              >
+                #
+              </th>
+            )}
             {columns.map((col) => (
               <th
                 key={col.key}
@@ -60,6 +72,11 @@ export default function DataTable({
               key={rowKey(row, index)}
               className="border-b border-[#eef0f2] last:border-b-0"
             >
+              {numbered && (
+                <td className="w-12 px-3 py-5 text-right text-[14px] tabular-nums text-[#9aa3aa]">
+                  {startIndex + index + 1}
+                </td>
+              )}
               {columns.map((col) => (
                 <td
                   key={col.key}
